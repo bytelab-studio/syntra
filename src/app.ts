@@ -1,0 +1,303 @@
+import * as flags from "./flags";
+import {declareCustomRoutes, handleRequest} from "./controller";
+import {buildModelSchema, buildRouteSchema} from "./schema";
+
+import * as path from "path";
+import * as http from "http";
+import * as https from "https";
+import * as fs from "fs";
+import * as crypto from "crypto";
+
+import express from "express";
+import {Express, Request, Response} from "express";
+import morgan from "morgan";
+import * as jwt from "jose";
+import {
+    getTables,
+    Authentication,
+    Table,
+    ColumnFlags,
+    PermissionLevel,
+} from "@bytelab.studio/syntra.plugin";
+
+import "./test";
+import {loadFromMain} from "./loader";
+
+if (flags.DEBUG) {
+    console.log()
+    console.log("WARNING: Debug is enabled many safety features are disabled.");
+    console.log("DON'T USE THIS IN PRODUCTION");
+    console.log()
+}
+
+const app: Express = express();
+app.use(morgan(":method :url :status :res[content-length] - :response-time ms"));
+
+let httpServer: http.Server<typeof http.IncomingMessage, typeof http.ServerResponse> | undefined;
+let httpsServer: https.Server<typeof http.IncomingMessage, typeof http.ServerResponse> | undefined;
+
+if (flags.HTTP_PORT != 0) {
+    httpServer = http.createServer(app);
+}
+if (flags.HTTPS_PORT != 0) {
+    const cert: string | undefined = process.env["SSL_CERT"];
+    const key: string | undefined = process.env["SSL_KEY"];
+
+    if (!!cert && !!key) {
+        const certBuff: Buffer = fs.readFileSync(cert);
+        const keyBuff: Buffer = fs.readFileSync(key);
+
+        httpsServer = https.createServer({cert: certBuff, key: keyBuff}, app);
+    }
+}
+
+app.get("/auth/login/visual", async (req: Request, res: Response): Promise<void> =>
+    await handleRequest((_, res) => {
+        return res.ok(fs.readFileSync(path.join(__dirname, "..", "static", "login.html")), "text/html");
+    }, req, res)
+);
+
+app.post("/auth/login", async (req: Request, res: Response): Promise<void> =>
+    await handleRequest(async (req, res) => {
+        const body: { username?: string, hash?: string } | null = req.body.json();
+        if (!body || !body.username || !body.hash) {
+            return res.badRequest("Missing properties 'username' or 'hash'");
+        }
+        let password: string;
+        try {
+            password = crypto.privateDecrypt({
+                key: flags.LOGIN_CERT.privateKey,
+                padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+                oaepHash: "sha-256"
+            }, Buffer.from(body.hash, "base64")).toString();
+        } catch {
+            if (!flags.DEBUG) {
+                return res.badRequest("Invalid password hash");
+            }
+
+            password = body.hash;
+        }
+
+        const hash: string = crypto.createHash("sha256").update(password).digest("hex");
+        const auth: Authentication | undefined =
+            (await Authentication.selectAll<typeof Authentication, Authentication>(Authentication.root))
+                .find(auth => auth.username.getValue() == body.username || auth.email.getValue() == body.username)
+        if (!auth) {
+            return res.unauthorized("User could not be found");
+        }
+        if (auth.password.getValue() != hash) {
+            return res.unauthorized("Password is incorrect");
+        }
+        const token: string = await new jwt.SignJWT({
+            auth_id: auth.primaryKey.getValue()
+        })
+            .setProtectedHeader({
+                alg: "HS512"
+            }).setIssuedAt()
+            .setExpirationTime("30min")
+            .sign(flags.JWT_SECRET);
+        return res.ok({
+            token: token
+        });
+    }, req, res)
+);
+
+app.get("/auth/cert", async (req: Request, res: Response): Promise<void> =>
+    await handleRequest(async (_, res) => {
+        return res.ok(flags.LOGIN_CERT.publicKey, "application/octet-stream");
+    }, req, res)
+);
+
+app.get("/schema/models", async (req: Request, res: Response): Promise<void> =>
+    await handleRequest(async (_, res) => {
+        return res.ok(getTables().map(table => `/schema/models/${table.tableName}`));
+    }, req, res)
+);
+
+app.get("/schema/routes", async (req: Request, res: Response): Promise<void> =>
+    await handleRequest(async (_, res) => {
+        return res.ok(getTables().map(table => `/schema/routes/${table.tableName}`));
+    }, req, res)
+);
+
+getTables().forEach(table => {
+    app.use(`/${table.tableName}`, declareCustomRoutes(table));
+
+    app.get(`/schema/models/${table.tableName}`, async (req: Request, res: Response): Promise<void> =>
+        await handleRequest(async (_, res) => {
+            return res.ok(buildModelSchema(table));
+        }, req, res)
+    );
+
+    app.get(`/schema/routes/${table.tableName}`, async (req: Request, res: Response): Promise<void> =>
+        await handleRequest((_, res) => {
+            return res.ok(buildRouteSchema(table));
+        }, req, res)
+    )
+
+    if (table.routes.enableGetAllRoute) {
+        app.get(`/${table.tableName}`, async (req: Request, res: Response): Promise<void> =>
+            await handleRequest(async (req, res) => {
+                const rows: Table[] = await table.selectAll(req.authorization.auth);
+                const objs: object[] = rows.map(row => row.deserialize());
+                return res.ok({
+                    status: 200,
+                    count: objs.length,
+                    results: objs
+                });
+            }, req, res)
+        );
+    }
+
+    if (table.routes.enableGetSingleRoute) {
+        app.get(`/${table.tableName}/:id`, async (req: Request, res: Response): Promise<void> =>
+            await handleRequest(async (req, res) => {
+                const id: number | null = req.params.getInt("id");
+                if (!id) {
+                    return res.badRequest();
+                }
+                const row: Table | null = await table.select(req.authorization.auth, id);
+                if (!row) {
+                    return res.notFound()
+                }
+                return res.ok({
+                    status: 200,
+                    count: 1,
+                    results: row.deserialize()
+                })
+            }, req, res)
+        );
+    }
+
+    if (table.routes.enableCreateRoute) {
+        app.post(`/${table.tableName}`, async (req: Request, res: Response): Promise<void> =>
+            await handleRequest(async (req, res) => {
+                if (!req.authorization.auth) {
+                    return res.unauthorized();
+                }
+                const body: Record<string, any> | null = req.body.json();
+                if (!body || !("data" in body)) {
+                    return res.badRequest();
+                }
+                const data: Record<string, any> = body.data;
+                const row: Table = new table();
+                for (let column of row.getColumns()) {
+                    const value: any | undefined = data[column.getColumnName()];
+                    if (typeof value == "undefined") {
+                        column.setValue(null);
+                    }
+                    column.setValue(value);
+                }
+                const errors: string[] = row.validate();
+                if (errors.length > 0) {
+                    return res.badRequest("Row validation failed:\n" + errors.join("\n"));
+                }
+
+                if ("permission" in body) {
+                    const readLevel: PermissionLevel | undefined =
+                        typeof PermissionLevel[body.permission.read_level] == "undefined"
+                            ? body.permission.read_level
+                            : undefined;
+                    const writeLevel: PermissionLevel | undefined =
+                        typeof PermissionLevel[body.permission.write_level] == "undefined"
+                            ? body.permission.write_level
+                            : undefined;
+                    const deleteLevel: PermissionLevel | undefined =
+                        typeof PermissionLevel[body.permission.delete_level] == "undefined"
+                            ? body.permission.delete_level
+                            : undefined;
+
+                    await row.insert(
+                        req.authorization.auth,
+                        readLevel,
+                        writeLevel,
+                        deleteLevel);
+                } else {
+                    await row.insert(req.authorization.auth);
+                }
+                return res.ok({
+                    status: 200,
+                    count: 1,
+                    results: [row.deserialize()]
+                });
+            }, req, res)
+        );
+    }
+
+    if (table.routes.enableUpdateRoute) {
+        app.put(`/${table.tableName}`, async (req: Request, res: Response): Promise<void> =>
+            await handleRequest(async (req, res) => {
+                const id: number | null = req.params.getInt("id");
+                if (!id) {
+                    return res.badRequest();
+                }
+                const body: Record<string, any> | null = req.body.json();
+                if (!body) {
+                    return res.badRequest();
+                }
+                const row: Table | null = await table.select(req.authorization.auth, id);
+                if (!row) {
+                    return res.notFound();
+                }
+                for (let column of row.getColumns()) {
+                    if (column.containsFlag(ColumnFlags.READONLY)) {
+                        continue;
+                    }
+                    const value: any | undefined = body[column.getColumnName()];
+                    if (typeof value == "undefined") {
+                        continue;
+                    }
+                    column.setValue(value);
+                }
+                const errors: string[] = row.validate();
+                if (errors.length > 0) {
+                    return res.badRequest("Row validation failed:\n" + errors.join("\n"));
+                }
+                row.update(req.authorization.auth);
+                return res.ok({
+                    status: 200,
+                    count: 1,
+                    results: [row.deserialize()]
+                });
+            }, req, res)
+        );
+    }
+
+    if (table.routes.enableDeleteRoute) {
+        app.delete(`/${table.tableName}`, async (req: Request, res: Response): Promise<void> =>
+            await handleRequest(async (req, res) => {
+                const id: number | null = req.params.getInt("id");
+                if (!id) {
+                    return res.badRequest();
+                }
+                const row: Table | null = await table.select(req.authorization.auth, id);
+                if (!row) {
+                    return res.notFound();
+                }
+                row.delete(req.authorization.auth);
+                return res.ok({
+                    status: 200
+                });
+            }, req, res)
+        );
+    }
+});
+
+app.all("*", (req, res) =>
+    handleRequest((_, res) => {
+        return res.notFound();
+    }, req, res)
+);
+
+if (!!httpServer) {
+    httpServer.listen(flags.HTTP_PORT);
+}
+if (!!httpsServer && !flags.DEBUG) {
+    httpsServer.listen(flags.HTTPS_PORT);
+}
+
+loadFromMain().forEach(plugin => {
+    console.log(`INFO: Load '${plugin}'`);
+    require(plugin)
+});
+require(path.join(__dirname, "drivers", flags.DB_DRIVER));
