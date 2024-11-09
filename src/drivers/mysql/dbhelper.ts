@@ -1,4 +1,12 @@
-import {Column, ColumnFlags, PrimaryColumn, Relation, RelationLoad, Table, TableRef} from "@bytelab.studio/syntra.plugin";
+import {
+    Column,
+    ColumnFlags,
+    PrimaryColumn,
+    Relation,
+    RelationLoad,
+    Table,
+    TableRef
+} from "@bytelab.studio/syntra.plugin";
 
 function construct_column_creation(column: Column<unknown>): string {
     const flags: string[] = [];
@@ -50,10 +58,11 @@ function construct_table_join(table: Table, relation: Relation<TableRef<Table>, 
             continue;
         }
 
-        innerJoins.push(construct_table_join(refTable, innerRelation, table.tableName + "_" + relation.refTable.tableName));
+        innerJoins.push(construct_table_join(refTable, innerRelation, table.tableName + "_" + relation.getColumnName() + "_" + relation.refTable.tableName));
     }
 
-    return `JOIN \`${relation.refTable.tableName}\` AS \`${table.tableName + "_" + relation.refTable.tableName}\` ON \`${asName || table.tableName}\`.\`${relation.getColumnName()}\` = \`${table.tableName + "_" + relation.refTable.tableName}\`.\`${relation.refTable.tableName + "_id"}\` ${innerJoins.join(" ")}`
+    const useName: string = table.tableName + "_" + relation.getColumnName() + "_" + relation.refTable.tableName;
+    return `JOIN \`${relation.refTable.tableName}\` AS \`${useName}\` ON \`${asName || table.tableName}\`.\`${relation.getColumnName()}\` = \`${useName}\`.\`${relation.refTable.tableName + "_id"}\` ${innerJoins.join(" ")}`;
 }
 
 export function construct_select_single<T extends TableRef<K>, K extends Table>(template: T): string {
@@ -109,9 +118,13 @@ export function construct_update<K extends Table>(table: K): string {
         names.push(column.getColumnName());
     }
 
-    return `UPDATE \`${table.tableName}\` SET ${names.map(n => `\`${n}\` = ?`).join(",")} WHERE \`${table.primaryKey.getColumnName()}\` = ?;`;
+    return `UPDATE \`${table.tableName}\`
+            SET ${names.map(n => `\`${n}\` = ?`).join(",")}
+            WHERE \`${table.primaryKey.getColumnName()}\` = ?;`;
 }
 
 export function construct_delete<K extends Table>(table: K): string {
-    return `DELETE FROM \`${table.tableName}\` WHERE \`${table.primaryKey.getColumnName()}\` = ?`;
+    return `DELETE
+            FROM \`${table.tableName}\`
+            WHERE \`${table.primaryKey.getColumnName()}\` = ?`;
 }
