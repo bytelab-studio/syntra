@@ -181,13 +181,7 @@ getTables().forEach(table => {
                 }
                 const data: Record<string, any> = body.data;
                 const row: Table = new table();
-                for (let column of row.getColumns()) {
-                    const value: any | undefined = data[column.getColumnName()];
-                    if (typeof value == "undefined") {
-                        column.setValue(null);
-                    }
-                    column.setValue(value);
-                }
+                row.serialize(data);
                 const errors: string[] = row.validate();
                 if (errors.length > 0) {
                     return res.badRequest("Row validation failed:\n" + errors.join("\n"));
@@ -247,13 +241,13 @@ getTables().forEach(table => {
                     if (typeof value == "undefined") {
                         continue;
                     }
-                    column.setValue(value);
+                    column.setValue(column.getColumnType().import(value));
                 }
                 const errors: string[] = row.validate();
                 if (errors.length > 0) {
                     return res.badRequest("Row validation failed:\n" + errors.join("\n"));
                 }
-                row.update(req.authorization.auth);
+                await row.update(req.authorization.auth);
                 return res.ok({
                     status: 200,
                     count: 1,
@@ -274,7 +268,7 @@ getTables().forEach(table => {
                 if (!row) {
                     return res.notFound();
                 }
-                row.delete(req.authorization.auth);
+                await row.delete(req.authorization.auth);
                 return res.ok({
                     status: 200
                 });
