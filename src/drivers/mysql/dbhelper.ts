@@ -44,10 +44,7 @@ export function construct_table_creation<T extends TableRef<K>, K extends Table>
         }
     }
 
-    return `CREATE TABLE IF NOT EXISTS \`${table.tableName}\`
-            (
-                ${items.join(",\n")}
-            ) ENGINE = InnoDB`;
+    return `CREATE TABLE IF NOT EXISTS \`${table.tableName}\` (${items.join(",")}) ENGINE = InnoDB`;
 }
 
 function construct_table_join(table: Table, relation: Relation<TableRef<Table>, Table>, asName: string | undefined = undefined): string {
@@ -77,9 +74,7 @@ export function construct_select_single<T extends TableRef<K>, K extends Table>(
         joins.push(construct_table_join(table, relation));
     }
 
-    return `SELECT *
-            FROM \`${table.tableName}\` ${joins.join(" ")}
-            WHERE \`${table.tableName}\`.\`${table.primaryKey.getColumnName()}\` = ?`;
+    return `SELECT * FROM \`${table.tableName}\` ${joins.join(" ")} WHERE \`${table.tableName}\`.\`${table.primaryKey.getColumnName()}\` = ?`;
 }
 
 export function construct_select_all<T extends TableRef<K>, K extends Table>(template: T): string {
@@ -94,8 +89,7 @@ export function construct_select_all<T extends TableRef<K>, K extends Table>(tem
         joins.push(construct_table_join(table, relation));
     }
 
-    return `SELECT *
-            FROM \`${table.tableName}\` ${joins.join(" ")}`;
+    return `SELECT * FROM \`${table.tableName}\` ${joins.join(" ")}`;
 }
 
 export function construct_insert_single<K extends Table>(table: K): string {
@@ -124,7 +118,5 @@ export function construct_update<K extends Table>(table: K): string {
 }
 
 export function construct_delete<K extends Table>(table: K): string {
-    return `DELETE
-            FROM \`${table.tableName}\`
-            WHERE \`${table.primaryKey.getColumnName()}\` = ?`;
+    return `DELETE FROM \`${table.tableName}\` WHERE \`${table.primaryKey.getColumnName()}\` = ?`;
 }
