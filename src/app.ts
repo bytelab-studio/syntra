@@ -1,6 +1,8 @@
+#!/usr/bin/env node
 import * as flags from "./flags";
 import {declareCustomRoutes, handleRequest} from "./controller";
 import {buildModelSchema, buildRouteSchema} from "./schema";
+import {loadFromMain} from "./loader";
 
 import * as path from "path";
 import * as http from "http";
@@ -20,8 +22,6 @@ import {
     PermissionLevel,
 } from "@bytelab.studio/syntra.plugin";
 
-import "./test";
-import {loadFromMain} from "./loader";
 
 if (flags.DEBUG) {
     console.log()
