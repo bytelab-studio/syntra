@@ -13,14 +13,14 @@
         "syntra"
     ],
     "scripts": {
-        "test": "echo \\\"Error: no tests specified\\\" && exit 0",
+        "test": "echo \"Error: no tests specified\" && exit 0",
         "syntra": "node out/app.js"
     },
     "bin": {
         "syntra": "out/app.js"
     },
     "dependencies": {
-        "@bytelab.studio/syntra.plugin": "file:../bls.api.plugin",
+        "@bytelab.studio/syntra.plugin": "file:../bls.api.plugin/bytelab.studio-syntra.plugin-1.0.0.tgz",
         "express": "^4.21.0",
         "jose": "^5.9.4",
         "morgan": "^1.10.0",
