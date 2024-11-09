@@ -1,21 +1,26 @@
 {
     "name": "@bytelab.studio/syntra",
     "version": "1.0.0",
-    "description": "",
-    "main": "index.js",
+    "description": "A modular restful API Server",
+    "main": "",
+    "author": "Christoph Koschel",
+    "license": "MIT",
+    "keywords": [
+        "server",
+        "api",
+        "rest",
+        "restful",
+        "syntra"
+    ],
     "scripts": {
         "test": "echo \\\"Error: no tests specified\\\" && exit 0",
         "syntra": "node out/app.js"
     },
-    "keywords": [],
-    "author": "",
-    "license": "MIT",
     "bin": {
         "syntra": "out/app.js"
     },
     "dependencies": {
         "@bytelab.studio/syntra.plugin": "file:../bls.api.plugin",
-        "bls.api.plugin": "file:../bls.api.plugin",
         "express": "^4.21.0",
         "jose": "^5.9.4",
         "morgan": "^1.10.0",
@@ -25,5 +30,9 @@
         "@types/express": "^5.0.0",
         "@types/morgan": "^1.9.9",
         "@types/node": "^22.7.5"
-    }
+    },
+    "files": [
+        "out",
+        "static"
+    ]
 }
