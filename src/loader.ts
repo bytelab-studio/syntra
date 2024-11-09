@@ -10,7 +10,11 @@ interface PackageJSON {
 
 function loadPlugins(root: string, packageJSON: PackageJSON, buff: string[], initPackage: boolean = false): void {
     console.log(`INFO: Check '${packageJSON.name}'`);
-    const depKeys: string[] = Object.keys(packageJSON.dependencies)
+    const depKeys: string[] = Object.keys(packageJSON.dependencies);
+
+    if (packageJSON.name == "@bytelab.studio/syntra" || packageJSON.name == "@bytelab.studio/syntra.plugin") {
+        return;
+    }
     if (!depKeys.includes("@bytelab.studio/syntra.plugin") && !initPackage) {
         return;
     }
@@ -35,15 +39,12 @@ function loadPlugins(root: string, packageJSON: PackageJSON, buff: string[], ini
 }
 
 export function loadFromMain(): string[] {
-    const subDir: string = path.join(__dirname, "..", "..");
+    const subDir: string = path.join(__dirname, "..", "..", "..");
     let root: string;
-    let initPackage: boolean;
     if (path.basename(subDir) == "node_modules") {
         root = path.join(subDir, "..");
-        initPackage = false;
     } else {
         root = path.join(__dirname, "..");
-        initPackage = true;
     }
     const rootPackage: string = path.join(root, "package.json");
     if (!fs.existsSync(rootPackage) || !fs.statSync(rootPackage).isFile()) {
@@ -53,7 +54,7 @@ export function loadFromMain(): string[] {
     try {
         const packageJSON: PackageJSON = JSON.parse(fs.readFileSync(rootPackage, "utf8"));
         const arr: string[] = [];
-        loadPlugins(root, packageJSON, arr, initPackage);
+        loadPlugins(root, packageJSON, arr, true);
         return arr;
     } catch (e) {
         console.log(`Cannot load package.json in '${rootPackage}': ${e}`);
