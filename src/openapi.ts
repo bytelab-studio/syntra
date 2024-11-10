@@ -173,7 +173,7 @@ export function generateOAS(): string {
     }
     const builder = OpenApiBuilder
         .create()
-        .addOpenApiVersion("3.1.0")
+        .addOpenApiVersion("3.0.1")
         .addInfo({
             title: "APP",
             description: "BLABLABLA",
