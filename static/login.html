@@ -142,7 +142,7 @@
         if (!!_cert) {
             return _cert;
         }
-        const res = await fetch("/auth/cert");
+        const res = await fetch("/authentication/cert");
         return _cert = (await res.text()).trim();
     }
 
@@ -219,7 +219,7 @@
         const encrypted = await encryptRSA(pub, new TextEncoder().encode(passValue));
         const encryptedBase64 = window.btoa(ab2str(encrypted));
 
-        const res = await fetch("/auth/login", {
+        const res = await fetch("/authentication/login", {
             method: "POST",
             body: JSON.stringify({
                 username: nameValue,

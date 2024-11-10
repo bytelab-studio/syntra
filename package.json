@@ -24,7 +24,8 @@
         "express": "^4.21.0",
         "jose": "^5.9.4",
         "morgan": "^1.10.0",
-        "mysql2": "^3.11.3"
+        "mysql2": "^3.11.3",
+        "openapi3-ts": "^4.4.0"
     },
     "devDependencies": {
         "@types/express": "^5.0.0",

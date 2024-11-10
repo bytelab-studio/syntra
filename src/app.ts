@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import * as flags from "./flags";
 import {declareCustomRoutes, handleRequest} from "./controller";
-import {buildModelSchema, buildRouteSchema} from "./schema";
 import {loadFromMain} from "./loader";
 
 import * as path from "path";
@@ -19,8 +18,9 @@ import {
     Authentication,
     Table,
     ColumnFlags,
-    PermissionLevel,
+    PermissionLevel, SchemaDefinition,
 } from "@bytelab.studio/syntra.plugin";
+import {generateOAS} from "./openapi";
 
 
 if (flags.DEBUG) {
@@ -51,56 +51,100 @@ if (flags.HTTPS_PORT != 0) {
     }
 }
 
-app.get("/auth/login/visual", async (req: Request, res: Response): Promise<void> =>
+app.get("/swagger-ui", async (req: Request, res: Response): Promise<void> =>
+    await handleRequest((_, res) => {
+        return res.ok(fs.readFileSync(path.join(__dirname, "..", "static", "swagger.html")), "text/html");
+    }, req, res)
+);
+
+
+app.get("/swagger.json", async (req: Request, res: Response): Promise<void> =>
+    await handleRequest(async (_, res) => {
+
+        return res.ok(generateOAS(), "application/json");
+    }, req, res)
+);
+
+
+app.get("/authentication/login/visual", async (req: Request, res: Response): Promise<void> =>
     await handleRequest((_, res) => {
         return res.ok(fs.readFileSync(path.join(__dirname, "..", "static", "login.html")), "text/html");
     }, req, res)
 );
 
-app.post("/auth/login", async (req: Request, res: Response): Promise<void> =>
-    await handleRequest(async (req, res) => {
-        const body: { username?: string, hash?: string } | null = req.body.json();
-        if (!body || !body.username || !body.hash) {
-            return res.badRequest("Missing properties 'username' or 'hash'");
+const LOGIN_MODEL = SchemaDefinition.define("login_model", {
+    type: "object",
+    properties: {
+        username: {
+            type: "string"
+        },
+        hash: {
+            type: "string"
         }
-        let password: string;
-        try {
-            password = crypto.privateDecrypt({
-                key: flags.LOGIN_CERT.privateKey,
-                padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-                oaepHash: "sha-256"
-            }, Buffer.from(body.hash, "base64")).toString();
-        } catch {
-            if (!flags.DEBUG) {
-                return res.badRequest("Invalid password hash");
-            }
+    },
+    required: ["username", "hash"]
+});
 
-            password = body.hash;
+const LOGIN_RESPONSE = SchemaDefinition.define("login_response", {
+    type: "object",
+    properties: {
+        token: {
+            type: "string"
+        }
+    }
+});
+
+Authentication.routes.post(builder => {
+    builder.setRequestBody(LOGIN_MODEL)
+    builder.addResponse(200, LOGIN_RESPONSE)
+}, "/login", async (req, res) => {
+    const body: { username?: string, hash?: string } | null = req.body.json();
+    if (!body || !body.username || !body.hash) {
+        return res.badRequest("Missing properties 'username' or 'hash'");
+    }
+    let password: string;
+    try {
+        password = crypto.privateDecrypt({
+            key: flags.LOGIN_CERT.privateKey,
+            padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+            oaepHash: "sha-256"
+        }, Buffer.from(body.hash, "base64")).toString();
+    } catch {
+        if (!flags.DEBUG) {
+            return res.badRequest("Invalid password hash");
         }
 
-        const hash: string = crypto.createHash("sha256").update(password).digest("hex");
-        const auth: Authentication | undefined =
-            (await Authentication.selectAll<typeof Authentication, Authentication>(Authentication.root))
-                .find(auth => auth.username.getValue() == body.username || auth.email.getValue() == body.username)
-        if (!auth) {
-            return res.unauthorized("User could not be found");
-        }
-        if (auth.password.getValue() != hash) {
-            return res.unauthorized("Password is incorrect");
-        }
-        const token: string = await new jwt.SignJWT({
-            auth_id: auth.primaryKey.getValue()
-        })
-            .setProtectedHeader({
-                alg: "HS512"
-            }).setIssuedAt()
-            .setExpirationTime("30min")
-            .sign(flags.JWT_SECRET);
-        return res.ok({
-            token: token
-        });
-    }, req, res)
-);
+        password = body.hash;
+    }
+
+    const hash: string = crypto.createHash("sha256").update(password).digest("hex");
+    const auth: Authentication | undefined =
+        (await Authentication.selectAll<typeof Authentication, Authentication>(Authentication.root))
+            .find(auth => auth.username.getValue() == body.username || auth.email.getValue() == body.username)
+    if (!auth) {
+        return res.unauthorized("User could not be found");
+    }
+    if (auth.password.getValue() != hash) {
+        return res.unauthorized("Password is incorrect");
+    }
+    const token: string = await new jwt.SignJWT({
+        auth_id: auth.primaryKey.getValue()
+    })
+        .setProtectedHeader({
+            alg: "HS512"
+        }).setIssuedAt()
+        .setExpirationTime("30min")
+        .sign(flags.JWT_SECRET);
+    return res.ok({
+        token: token
+    });
+});
+
+Authentication.routes.get(builder => {
+    builder.addResponse(200, "buffer", "application/octet-stream");
+}, "/cert", (_, res) => {
+    return res.ok(flags.LOGIN_CERT.publicKey, "application/octet-stream");
+});
 
 app.get("/auth/cert", async (req: Request, res: Response): Promise<void> =>
     await handleRequest(async (_, res) => {
@@ -108,32 +152,8 @@ app.get("/auth/cert", async (req: Request, res: Response): Promise<void> =>
     }, req, res)
 );
 
-app.get("/schema/models", async (req: Request, res: Response): Promise<void> =>
-    await handleRequest(async (_, res) => {
-        return res.ok(getTables().map(table => `/schema/models/${table.tableName}`));
-    }, req, res)
-);
-
-app.get("/schema/routes", async (req: Request, res: Response): Promise<void> =>
-    await handleRequest(async (_, res) => {
-        return res.ok(getTables().map(table => `/schema/routes/${table.tableName}`));
-    }, req, res)
-);
-
 getTables().forEach(table => {
     app.use(`/${table.tableName}`, declareCustomRoutes(table));
-
-    app.get(`/schema/models/${table.tableName}`, async (req: Request, res: Response): Promise<void> =>
-        await handleRequest(async (_, res) => {
-            return res.ok(buildModelSchema(table));
-        }, req, res)
-    );
-
-    app.get(`/schema/routes/${table.tableName}`, async (req: Request, res: Response): Promise<void> =>
-        await handleRequest((_, res) => {
-            return res.ok(buildRouteSchema(table));
-        }, req, res)
-    )
 
     if (table.routes.enableGetAllRoute) {
         app.get(`/${table.tableName}`, async (req: Request, res: Response): Promise<void> =>
@@ -152,6 +172,7 @@ getTables().forEach(table => {
     if (table.routes.enableGetSingleRoute) {
         app.get(`/${table.tableName}/:id`, async (req: Request, res: Response): Promise<void> =>
             await handleRequest(async (req, res) => {
+                console.log(req.params);
                 const id: number | null = req.params.getInt("id");
                 if (!id) {
                     return res.badRequest();
@@ -163,8 +184,8 @@ getTables().forEach(table => {
                 return res.ok({
                     status: 200,
                     count: 1,
-                    results: row.deserialize()
-                })
+                    results: [row.deserialize()]
+                });
             }, req, res)
         );
     }

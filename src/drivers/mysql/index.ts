@@ -1,6 +1,15 @@
 import * as dbhelper from "./dbhelper";
 
-import {setBridge, Bridge, TableRef, Table, ColumnFlags, Relation, Permission, getTables} from "@bytelab.studio/syntra.plugin"
+import {
+    setBridge,
+    Bridge,
+    TableRef,
+    Table,
+    ColumnFlags,
+    Relation,
+    Permission,
+    getTables
+} from "@bytelab.studio/syntra.plugin"
 import * as mysql from "mysql2/promise"
 
 function map_row_to_map(row: any): Map<string, any> {
@@ -31,7 +40,7 @@ function map_row_to_object<T extends TableRef<K>, K extends Table>(row: mysql.Ro
                 column.setKeyValue(value);
             }
             if (!column.isKeyNull()) {
-                column.setValue(map_row_to_object(row, column.refTable, table.tableName + "_" + column.refTable.tableName));
+                column.setValue(map_row_to_object(row, column.refTable, table.tableName + "_" + column.getColumnName() + "_" + column.refTable.tableName));
             }
         } else {
             if (column.getColumnType().validate(value)) {
