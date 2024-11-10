@@ -32,5 +32,3 @@ export const LOGIN_CERT = crypto.generateKeyPairSync("rsa", {
         format: "pem"
     }
 });
-
-

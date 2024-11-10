@@ -79,7 +79,7 @@ function generateSelectModel(table: TableRef<Table>, builder: OpenApiBuilder): v
             format: format
         }
         if (column instanceof Relation && column.loadingMethod == RelationLoad.DIRECT) {
-            properties[column.refTable.tableName] = {
+            properties[column.columnRefName] = {
                 type: "object",
                 $ref: `#/components/schemas/${column.refTable.tableName + "_select"}`
             }
