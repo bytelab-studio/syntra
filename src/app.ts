@@ -51,6 +51,12 @@ if (flags.HTTPS_PORT != 0) {
     }
 }
 
+loadFromMain().forEach(plugin => {
+    console.log(`INFO: Load '${plugin}'`);
+    require(plugin)
+});
+require(path.join(__dirname, "drivers", flags.DB_DRIVER));
+
 app.get("/swagger-ui", async (req: Request, res: Response): Promise<void> =>
     await handleRequest((_, res) => {
         return res.ok(fs.readFileSync(path.join(__dirname, "..", "static", "swagger.html")), "text/html");
@@ -310,9 +316,3 @@ if (!!httpServer) {
 if (!!httpsServer && !flags.DEBUG) {
     httpsServer.listen(flags.HTTPS_PORT);
 }
-
-loadFromMain().forEach(plugin => {
-    console.log(`INFO: Load '${plugin}'`);
-    require(plugin)
-});
-require(path.join(__dirname, "drivers", flags.DB_DRIVER));
