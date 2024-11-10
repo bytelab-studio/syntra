@@ -22,7 +22,6 @@ import {
 } from "@bytelab.studio/syntra.plugin";
 import {generateOAS} from "./openapi";
 
-
 if (flags.DEBUG) {
     console.log()
     console.log("WARNING: Debug is enabled many safety features are disabled.");
@@ -236,6 +235,7 @@ getTables().forEach(table => {
                 } else {
                     await row.insert(req.authorization.auth);
                 }
+                await row.resolve(req.authorization.auth);
                 return res.ok({
                     status: 200,
                     count: 1,
@@ -272,7 +272,7 @@ getTables().forEach(table => {
                 }
                 const errors: string[] = row.validate();
                 if (errors.length > 0) {
-                    return res.badRequest("Row validation failed:\n" + errors.join("\n"));
+                    return res.badRequest("Row validation failed: " + errors.join("; "));
                 }
                 await row.update(req.authorization.auth);
                 return res.ok({
