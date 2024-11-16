@@ -97,7 +97,7 @@ function generateCreateModel(table: TableRef<Table>, builder: OpenApiBuilder): v
     const properties: { [p: string]: SchemaObject | ReferenceObject } = {};
 
     for (const column of row.getColumns()) {
-        if (column instanceof PrimaryColumn) {
+        if (column instanceof PrimaryColumn || column == row.permission) {
             continue;
         }
         let format: 'int32' | 'int64' | 'float' | 'double' | 'byte' | 'binary' | 'date' | 'date-time' | 'password' | string | undefined = undefined;
@@ -139,7 +139,9 @@ function generateUpdateModel(table: TableRef<Table>, builder: OpenApiBuilder): v
     const properties: { [p: string]: SchemaObject | ReferenceObject } = {};
 
     for (const column of row.getColumns()) {
-        if (column.containsFlag(ColumnFlags.PRIVATE) || column.containsFlag(ColumnFlags.READONLY)) {
+        if (column.containsFlag(ColumnFlags.PRIVATE) ||
+            column.containsFlag(ColumnFlags.READONLY) ||
+            column instanceof  PrimaryColumn || column == row.permission) {
             continue;
         }
         let format: 'int32' | 'int64' | 'float' | 'double' | 'byte' | 'binary' | 'date' | 'date-time' | 'password' | string | undefined = undefined;
