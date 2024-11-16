@@ -1,10 +1,11 @@
 import {OpenApiBuilder, OpenAPIObject, ReferenceObject, SchemaObject, SchemaObjectType} from "openapi3-ts/oas31";
 import {
+    Column,
     ColumnFlags,
     getTables,
     OpenAPISchemaBuilder,
-    PrimaryColumn,
-    Relation,
+    PrimaryColumn, Relation1T1,
+    Relation1TN,
     RelationLoad,
     SchemaDefinition,
     SQLType,
@@ -60,28 +61,38 @@ function generateSelectModel(table: TableRef<Table>, builder: OpenApiBuilder): v
     const properties: { [p: string]: SchemaObject | ReferenceObject } = {};
 
     for (const column of row.getColumns()) {
-        if (column.containsFlag(ColumnFlags.PRIVATE)) {
+        if (column instanceof Column && column.containsFlag(ColumnFlags.PRIVATE)) {
             continue;
         }
-        let format: 'int32' | 'int64' | 'float' | 'double' | 'byte' | 'binary' | 'date' | 'date-time' | 'password' | string | undefined = undefined;
-        const type: SQLType = column.getColumnType();
-        if (type == SQLType.DATE) {
-            format = "date";
+        if (column instanceof Column) {
+            let format: 'int32' | 'int64' | 'float' | 'double' | 'byte' | 'binary' | 'date' | 'date-time' | 'password' | string | undefined = undefined;
+            const type: SQLType = column.getColumnType();
+            if (type == SQLType.DATE) {
+                format = "date";
+            }
+            if (type == SQLType.TIME) {
+                format = "time";
+            }
+            if (type == SQLType.DATETIME) {
+                format = "date-time";
+            }
+            properties[column.getColumnName()] = {
+                type: column.getColumnType().jsonType as SchemaObjectType | SchemaObjectType[],
+                format: format
+            }
         }
-        if (type == SQLType.TIME) {
-            format = "time";
-        }
-        if (type == SQLType.DATETIME) {
-            format = "date-time";
-        }
-        properties[column.getColumnName()] = {
-            type: column.getColumnType().jsonType as SchemaObjectType | SchemaObjectType[],
-            format: format
-        }
-        if (column instanceof Relation && column.loadingMethod == RelationLoad.DIRECT) {
+        if (column instanceof Relation1T1 && column.loadingMethod == RelationLoad.DIRECT) {
             properties[column.columnRefName] = {
                 type: "object",
                 $ref: `#/components/schemas/${column.refTable.tableName + "_select"}`
+            }
+        }
+        if (column instanceof Relation1TN && column.loadingMethod == RelationLoad.DIRECT) {
+            properties[column.getColumnName()] = {
+                type: "array",
+                items: {
+                    $ref: `#/components/schemas/${column.refTable.tableName + "_select"}`
+                }
             }
         }
     }
@@ -100,20 +111,22 @@ function generateCreateModel(table: TableRef<Table>, builder: OpenApiBuilder): v
         if (column instanceof PrimaryColumn || column == row.permission) {
             continue;
         }
-        let format: 'int32' | 'int64' | 'float' | 'double' | 'byte' | 'binary' | 'date' | 'date-time' | 'password' | string | undefined = undefined;
-        const type: SQLType = column.getColumnType();
-        if (type == SQLType.DATE) {
-            format = "date";
-        }
-        if (type == SQLType.TIME) {
-            format = "time";
-        }
-        if (type == SQLType.DATETIME) {
-            format = "date-time";
-        }
-        properties[column.getColumnName()] = {
-            type: column.getColumnType().jsonType as SchemaObjectType | SchemaObjectType[],
-            format: format,
+        if (column instanceof Column || column instanceof Relation1T1) {
+            let format: 'int32' | 'int64' | 'float' | 'double' | 'byte' | 'binary' | 'date' | 'date-time' | 'password' | string | undefined = undefined;
+            const type: SQLType = column.getColumnType();
+            if (type == SQLType.DATE) {
+                format = "date";
+            }
+            if (type == SQLType.TIME) {
+                format = "time";
+            }
+            if (type == SQLType.DATETIME) {
+                format = "date-time";
+            }
+            properties[column.getColumnName()] = {
+                type: column.getColumnType().jsonType as SchemaObjectType | SchemaObjectType[],
+                format: format,
+            }
         }
     }
 
@@ -126,7 +139,7 @@ function generateCreateModel(table: TableRef<Table>, builder: OpenApiBuilder): v
             data: {
                 type: "object",
                 properties: properties,
-                required: Array.from(row.getColumns()).filter(col => !col.containsFlag(ColumnFlags.NULLABLE)).map(col => col.getColumnName())
+                required: Array.from(row.getColumns()).filter(col => col instanceof Column && !col.containsFlag(ColumnFlags.NULLABLE)).map(col => col.getColumnName())
             }
         },
         required: ["data"]
@@ -139,25 +152,31 @@ function generateUpdateModel(table: TableRef<Table>, builder: OpenApiBuilder): v
     const properties: { [p: string]: SchemaObject | ReferenceObject } = {};
 
     for (const column of row.getColumns()) {
-        if (column.containsFlag(ColumnFlags.PRIVATE) ||
-            column.containsFlag(ColumnFlags.READONLY) ||
-            column instanceof  PrimaryColumn || column == row.permission) {
+        if (column instanceof Column &&
+            (
+                column.containsFlag(ColumnFlags.PRIVATE) ||
+                column.containsFlag(ColumnFlags.READONLY)
+            ) ||
+            column instanceof PrimaryColumn ||
+            column == row.permission) {
             continue;
         }
-        let format: 'int32' | 'int64' | 'float' | 'double' | 'byte' | 'binary' | 'date' | 'date-time' | 'password' | string | undefined = undefined;
-        const type: SQLType = column.getColumnType();
-        if (type == SQLType.DATE) {
-            format = "date";
-        }
-        if (type == SQLType.TIME) {
-            format = "time";
-        }
-        if (type == SQLType.DATETIME) {
-            format = "date-time";
-        }
-        properties[column.getColumnName()] = {
-            type: column.getColumnType().jsonType as SchemaObjectType | SchemaObjectType[],
-            format: format
+        if (column instanceof Column || column instanceof Relation1T1) {
+            let format: 'int32' | 'int64' | 'float' | 'double' | 'byte' | 'binary' | 'date' | 'date-time' | 'password' | string | undefined = undefined;
+            const type: SQLType = column.getColumnType();
+            if (type == SQLType.DATE) {
+                format = "date";
+            }
+            if (type == SQLType.TIME) {
+                format = "time";
+            }
+            if (type == SQLType.DATETIME) {
+                format = "date-time";
+            }
+            properties[column.getColumnName()] = {
+                type: column.getColumnType().jsonType as SchemaObjectType | SchemaObjectType[],
+                format: format
+            }
         }
     }
 

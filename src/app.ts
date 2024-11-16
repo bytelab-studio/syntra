@@ -19,7 +19,7 @@ import {
     Authentication,
     Table,
     ColumnFlags,
-    PermissionLevel, SchemaDefinition,
+    PermissionLevel, SchemaDefinition, Column,
 } from "@bytelab.studio/syntra.plugin";
 
 
@@ -248,7 +248,6 @@ getTables().forEach(table => {
     if (table.routes.enableGetSingleRoute) {
         app.get(`/${table.tableName}/:id`, async (req: Request, res: Response): Promise<void> =>
             await handleRequest(async (req, res) => {
-                console.log(req.params);
                 const id: number | null = req.params.getInt("id");
                 if (!id) {
                     return res.badRequest();
@@ -332,6 +331,10 @@ getTables().forEach(table => {
                     return res.notFound();
                 }
                 for (let column of row.getColumns()) {
+                    if (!(column instanceof Column)) {
+                        continue;
+                    }
+
                     if (column.containsFlag(ColumnFlags.READONLY)) {
                         continue;
                     }

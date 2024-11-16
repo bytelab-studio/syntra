@@ -6,9 +6,10 @@ import {
     TableRef,
     Table,
     ColumnFlags,
-    Relation,
+    Relation1T1,
     Permission,
-    getTables
+    getTables,
+    Column, Relation1TN
 } from "@bytelab.studio/syntra.plugin"
 import * as mysql from "mysql2/promise"
 
@@ -24,25 +25,27 @@ function map_row_to_map(row: any): Map<string, any> {
 
 function map_row_to_object<T extends TableRef<K>, K extends Table>(row: mysql.RowDataPacket, table: T, asName: string | undefined = undefined): K {
     const result: K = new table() as K;
-
     const tableData: Map<string, any> = map_row_to_map(row[asName || result.tableName]);
 
     for (const column of result.getColumns()) {
-        if (!tableData.has(column.getColumnName())) {
-            if (!column.containsFlag(ColumnFlags.NULLABLE)) {
-                throw `Missing column data '${column.getColumnName()}'`;
+        if (column instanceof Column || column instanceof Relation1T1) {
+            if (!tableData.has(column.getColumnName())) {
+                if (!column.containsFlag(ColumnFlags.NULLABLE)) {
+                    throw `Missing column data '${column.getColumnName()}'`;
+                }
+                column.setValue(null);
             }
-            column.setValue(null);
         }
+
         const value: any = tableData.get(column.getColumnName());
-        if (column instanceof Relation) {
+        if (column instanceof Relation1T1) {
             if (column.getColumnType().validate(value)) {
                 column.setKeyValue(value);
             }
             if (!column.isKeyNull()) {
-                column.setValue(map_row_to_object(row, column.refTable, table.tableName + "_" + column.getColumnName() + "_" + column.refTable.tableName));
+                column.setValue(map_row_to_object(row, column.refTable, column.getJoinName(table.tableName)));
             }
-        } else {
+        } else if (column instanceof Column) {
             if (column.getColumnType().validate(value)) {
                 column.setValue(value);
             } else {
@@ -52,6 +55,24 @@ function map_row_to_object<T extends TableRef<K>, K extends Table>(row: mysql.Ro
     }
 
     return result;
+}
+
+async function post_process_row<T extends Table>(row: T, relation: Relation1TN<Table>): Promise<void> {
+    const query: string = dbhelper.construct_1_to_n(relation);
+    const [rows]: [mysql.RowDataPacket[], mysql.FieldPacket[]] = await connection.query<mysql.RowDataPacket[]>({
+        sql: query,
+        values: [row.primaryKey.getValue()],
+        nestTables: true
+    });
+    relation.setValue(await Promise.all(rows.map(async rowData => {
+        const row: Table = map_row_to_object(rowData, relation.refTable);
+
+        for (const relation of row.get1TNRelations()) {
+            await post_process_row(row, relation);
+        }
+
+        return row;
+    })));
 }
 
 class BridgeImpl implements Bridge {
@@ -67,7 +88,12 @@ class BridgeImpl implements Bridge {
             return null;
         }
 
-        return map_row_to_object<T, K>(rows[0], table);
+        const row: K = map_row_to_object<T, K>(rows[0], table);
+
+        for (const relation of row.get1TNRelations()) {
+            await post_process_row(row, relation);
+        }
+        return row;
     }
 
     async selectAll<T extends TableRef<K>, K extends Table>(table: T): Promise<K[]> {
@@ -78,14 +104,22 @@ class BridgeImpl implements Bridge {
             nestTables: true
         });
 
-        return rows.map(row => map_row_to_object<T, K>(row, table));
+        return Promise.all(rows.map(async rowData => {
+            const row: K = map_row_to_object<T, K>(rowData, table);
+
+            for (const relation of row.get1TNRelations()) {
+                await post_process_row(row, relation);
+            }
+
+            return row;
+        }));
     }
 
     async update<K extends Table>(item: K): Promise<void> {
         try {
             await connection.beginTransaction();
             const query: string = dbhelper.construct_update(item);
-            const values: any[] = [...Array.from(item.getColumns()).filter(i => i != item.primaryKey && i != item.permission).map(i => i instanceof Relation ? i.getKeyValue() : i.getValue()), item.primaryKey.getValue()];
+            const values: any[] = [...Array.from(item.getColumns()).filter(i => i != item.primaryKey && i != item.permission).map(i => i instanceof Relation1T1 ? i.getKeyValue() : i.getValue()), item.primaryKey.getValue()];
             await connection.query({
                 sql: query,
                 values: values
@@ -102,7 +136,7 @@ class BridgeImpl implements Bridge {
             await connection.beginTransaction();
             {
                 const query: string = dbhelper.construct_insert_single(permission);
-                const values: any[] = Array.from(permission.getColumns()).map(i => i instanceof Relation ? i.getKeyValue() : i.containsFlag(ColumnFlags.AUTO_INCREMENT) && i.isNull() ? null : i.getValue());
+                const values: any[] = (Array.from(permission.getColumns()).filter(i => i instanceof Column || i instanceof Relation1T1) as (Column<unknown> | Relation1T1<Table>)[]).map(i => i instanceof Relation1T1 ? i.getKeyValue() : i.containsFlag(ColumnFlags.AUTO_INCREMENT) && i.isNull() ? null : i.getValue());
                 await connection.query({
                     sql: query,
                     values: values
@@ -115,7 +149,7 @@ class BridgeImpl implements Bridge {
             item.permission.setValue(permission);
             {
                 const query: string = dbhelper.construct_insert_single(item);
-                const values: any[] = Array.from(item.getColumns()).map(i => i instanceof Relation ? i.getKeyValue() : i.containsFlag(ColumnFlags.AUTO_INCREMENT) && i.isNull() ? null : i.getValue());
+                const values: any[] = (Array.from(item.getColumns()).filter(i => i instanceof Column || i instanceof Relation1T1) as (Column<unknown> | Relation1T1<Table>)[]).map(i => i instanceof Relation1T1 ? i.getKeyValue() : i.containsFlag(ColumnFlags.AUTO_INCREMENT) && i.isNull() ? null : i.getValue());
                 await connection.query({
                     sql: query,
                     values: values
