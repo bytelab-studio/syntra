@@ -47,7 +47,7 @@ export function construct_table_creation<T extends TableRef<K>, K extends Table>
     return `CREATE TABLE IF NOT EXISTS \`${table.tableName}\` (${items.join(",")}) ENGINE = InnoDB`;
 }
 
-function construct_table_join(table: Table, relation: Relation<TableRef<Table>, Table>, asName: string | undefined = undefined): string {
+function construct_table_join(table: Table, relation: Relation<Table>, asName: string | undefined = undefined): string {
     const innerJoins: string[] = [];
     const refTable: Table = new relation.refTable();
     for (const innerRelation of refTable.getRelations()) {
