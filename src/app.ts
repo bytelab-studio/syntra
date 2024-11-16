@@ -2,6 +2,7 @@
 import * as flags from "./flags";
 import {declareCustomRoutes, handleRequest} from "./controller";
 import {loadFromMain} from "./loader";
+import {generateOAS} from "./openapi";
 
 import * as path from "path";
 import * as http from "http";
@@ -20,7 +21,7 @@ import {
     ColumnFlags,
     PermissionLevel, SchemaDefinition,
 } from "@bytelab.studio/syntra.plugin";
-import {generateOAS} from "./openapi";
+
 
 if (flags.DEBUG) {
     console.log()
@@ -56,11 +57,13 @@ loadFromMain().forEach(plugin => {
 });
 require(path.join(__dirname, "drivers", flags.DB_DRIVER));
 
-app.get("/swagger-ui", async (req: Request, res: Response): Promise<void> =>
-    await handleRequest((_, res) => {
-        return res.ok(fs.readFileSync(path.join(__dirname, "..", "static", "swagger.html")), "text/html");
-    }, req, res)
-);
+if (flags.SWAGGER_UI) {
+    app.get("/swagger-ui", async (req: Request, res: Response): Promise<void> =>
+        await handleRequest((_, res) => {
+            return res.ok(fs.readFileSync(path.join(__dirname, "..", "static", "swagger.html")), "text/html");
+        }, req, res)
+    );
+}
 
 
 app.get("/swagger.json", async (req: Request, res: Response): Promise<void> =>

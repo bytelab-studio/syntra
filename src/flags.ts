@@ -3,6 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 
 export const DEBUG: boolean = (process.env["DEBUG"] || "false") == "true"
+export const SWAGGER_UI: boolean = (process.env["SWAGGER_UI"] || "false") == "true"
 const JWT_SECRET_VALUE: string | undefined = process.env["JWT_SECRET"];
 export const HTTPS_PORT: number = parseInt(process.env["HTTPS_PORT"] || "0");
 export const HTTP_PORT: number = parseInt(process.env["HTTP_PORT"] || "0");
