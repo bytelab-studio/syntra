@@ -154,6 +154,74 @@ Authentication.routes.get(builder => {
     return res.ok(flags.LOGIN_CERT.publicKey, "application/octet-stream");
 });
 
+const PASSWORD_CHANGE_MODEL: SchemaDefinition = SchemaDefinition.define("password_change_model", {
+    type: "object",
+    properties: {
+        username: {
+            type: "string"
+        },
+        hash: {
+            type: "string"
+        },
+        new_hash: {
+            type: "string",
+        },
+    },
+    required: ["username", "hash", "new_hash"]
+});
+
+Authentication.routes.post(builder => {
+    builder.addResponse(200, LOGIN_RESPONSE);
+    builder.setRequestBody(PASSWORD_CHANGE_MODEL);
+}, "/change_psw", async (req, res) => {
+    const body: { username?: string, hash?: string, new_hash?: string } | null = req.body.json();
+    if (!body || !body.username || !body.hash || !body.new_hash) {
+        return res.badRequest("Missing properties 'username' or 'hash'");
+    }
+    let password: string;
+    let new_password: string;
+    try {
+        password = crypto.privateDecrypt({
+            key: flags.LOGIN_CERT.privateKey,
+            padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+            oaepHash: "sha-256"
+        }, Buffer.from(body.hash, "base64")).toString();
+        new_password = crypto.privateDecrypt({
+            key: flags.LOGIN_CERT.privateKey,
+            padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+            oaepHash: "sha-256"
+        }, Buffer.from(body.new_hash, "base64")).toString();
+    } catch {
+        return res.badRequest("Invalid password hash or new_hash is invalid");
+    }
+
+    const hash: string = crypto.createHash("sha256").update(password).digest("hex");
+    const auth: Authentication | undefined =
+        (await Authentication.selectAll<typeof Authentication, Authentication>(Authentication.root))
+            .find(auth => auth.username.getValue() == body.username || auth.email.getValue() == body.username)
+    if (!auth) {
+        return res.unauthorized("User could not be found");
+    }
+    if (auth.password.getValue() != hash) {
+        return res.unauthorized("Password is incorrect");
+    }
+
+    auth.password.setValue(crypto.createHash("sha256").update(new_password).digest("hex"));
+    await auth.update(Authentication.root);
+
+    const token: string = await new jwt.SignJWT({
+        auth_id: auth.primaryKey.getValue()
+    })
+        .setProtectedHeader({
+            alg: "HS512"
+        }).setIssuedAt()
+        .setExpirationTime("30min")
+        .sign(flags.JWT_SECRET);
+    return res.ok({
+        token: token
+    });
+});
+
 app.get("/auth/cert", async (req: Request, res: Response): Promise<void> =>
     await handleRequest(async (_, res) => {
         return res.ok(flags.LOGIN_CERT.publicKey, "application/octet-stream");
