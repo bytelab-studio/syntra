@@ -12,6 +12,7 @@ import * as crypto from "crypto";
 
 import express from "express";
 import {Express, Request, Response} from "express";
+import cors from "cors";
 import morgan from "morgan";
 import * as jwt from "jose";
 import {
@@ -31,6 +32,8 @@ if (flags.DEBUG) {
 }
 
 const app: Express = express();
+
+app.use(cors());
 app.use(morgan(":method :url :status :res[content-length] - :response-time ms"));
 
 let httpServer: http.Server<typeof http.IncomingMessage, typeof http.ServerResponse> | undefined;
