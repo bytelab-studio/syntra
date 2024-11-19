@@ -83,6 +83,19 @@ app.get("/authentication/login/visual", async (req: Request, res: Response): Pro
     }, req, res)
 );
 
+app.get("/authentication/change_psw/visual", async (req: Request, res: Response): Promise<void> => {
+    await handleRequest((_, res) => {
+        return res.ok(fs.readFileSync(path.join(__dirname, "..", "static", "change_psw.html")), "text/html");
+    }, req, res)
+});
+
+Authentication.routes.get(builder => {
+    builder.addResponse(200, "buffer", "application/octet-stream");
+}, "/cert", (_, res) => {
+    return res.ok(flags.LOGIN_CERT.publicKey, "application/octet-stream");
+});
+
+
 const LOGIN_MODEL = SchemaDefinition.define("login_model", {
     type: "object",
     properties: {
@@ -149,12 +162,6 @@ Authentication.routes.post(builder => {
     return res.ok({
         token: token
     });
-});
-
-Authentication.routes.get(builder => {
-    builder.addResponse(200, "buffer", "application/octet-stream");
-}, "/cert", (_, res) => {
-    return res.ok(flags.LOGIN_CERT.publicKey, "application/octet-stream");
 });
 
 const PASSWORD_CHANGE_MODEL: SchemaDefinition = SchemaDefinition.define("password_change_model", {
@@ -224,12 +231,6 @@ Authentication.routes.post(builder => {
         token: token
     });
 });
-
-app.get("/auth/cert", async (req: Request, res: Response): Promise<void> =>
-    await handleRequest(async (_, res) => {
-        return res.ok(flags.LOGIN_CERT.publicKey, "application/octet-stream");
-    }, req, res)
-);
 
 getTables().forEach(table => {
     app.use(`/${table.tableName}`, declareCustomRoutes(table));

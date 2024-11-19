@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Syntra Login</title>
+    <title>Syntra change Password</title>
     <style>
         * {
             font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
@@ -68,8 +68,10 @@
         }
 
         output {
-            color: #D32F2F;
+            text-align: center;
+            color:#D32F2F;
         }
+
 
         @media (prefers-color-scheme: dark) {
             body {
@@ -105,8 +107,7 @@
             }
 
             output {
-                text-align: center;
-                color: #FF6659;
+                color:#FF6659;
             }
         }
 
@@ -125,19 +126,16 @@
 </head>
 <body>
 <div class="card">
-    <h1>Syntra Login</h1>
+    <h1>Password Change</h1>
     <input id="name" placeholder="Username / Email" type="text"/>
-    <input id="pass" placeholder="Password" type="password"/>
+    <input id="pass" placeholder="Old password" type="password"/>
+    <input id="pass2" placeholder="New password" type="password"/>
     <button id="login">
         Login
     </button>
     <output id="output"></output>
 </div>
 <script>
-    const from = new URLSearchParams(window.location.search).get("from");
-    if (!from) {
-        alert("WARNING: You use a login field with no source definition!")
-    }
     let _cert;
 
     async function fetchPublicKey() {
@@ -195,10 +193,12 @@
     document.getElementById("login").addEventListener("click", async () => {
         const name = document.getElementById("name");
         const pass = document.getElementById("pass");
+        const pass2 = document.getElementById("pass2");
         const output = document.getElementById("output");
 
         const nameValue = name.value;
         const passValue = pass.value;
+        const pass2Value = pass2.value;
 
         let faulty = false;
 
@@ -214,41 +214,41 @@
         } else {
             pass.classList.remove("error");
         }
+        if (!pass2Value || pass2Value.trim() == "") {
+            pass2.classList.add("error");
+            faulty = true;
+        } else {
+            pass2.classList.remove("error");
+        }
+
         if (faulty) {
             return;
         }
 
         const pub = await importPublicKey(await fetchPublicKey());
-        const encrypted = await encryptRSA(pub, new TextEncoder().encode(passValue));
-        const encryptedBase64 = window.btoa(ab2str(encrypted));
+        const encryptedPass = await encryptRSA(pub, new TextEncoder().encode(passValue));
+        const encryptedPassBase64 = window.btoa(ab2str(encryptedPass));
+        const encryptedPass2 = await encryptRSA(pub, new TextEncoder().encode(pass2Value));
+        const encryptedPass2Base64 = window.btoa(ab2str(encryptedPass2));
 
-        const res = await fetch("/authentication/login", {
+        const res = await fetch("/authentication/change_psw", {
             method: "POST",
             body: JSON.stringify({
                 username: nameValue,
-                hash: encryptedBase64
+                hash: encryptedPassBase64,
+                new_hash: encryptedPass2Base64
             }),
             headers: {
                 "Content-Type": "application/json"
             }
         });
-
         if (res.status != 200) {
             output.innerHTML = (await res.json())?.details || (await res.text());
             return;
         }
-
-        if (window.opener && window.parent == window) {
-            window.opener.postMessage({
-                token: (await res.json()).token
-            }, from);
-            window.close();
-        } else {
-            window.parent.postMessage({
-                token: (await res.json()).token
-            }, from);
-        }
+        console.log(await res.text());
     });
+
 </script>
 </body>
 </html>
