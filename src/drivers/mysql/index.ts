@@ -23,9 +23,9 @@ function map_row_to_map(row: any): Map<string, any> {
     return map;
 }
 
-function map_row_to_object<T extends TableRef<K>, K extends Table>(row: mysql.RowDataPacket, table: T, asName: string | undefined = undefined): K {
+function map_row_to_object<T extends TableRef<K>, K extends Table>(row: mysql.RowDataPacket, table: T, entryName: string, counter: [number]): K {
     const result: K = new table() as K;
-    const tableData: Map<string, any> = map_row_to_map(row[asName || result.tableName]);
+    const tableData: Map<string, any> = map_row_to_map(row[entryName]);
 
     for (const column of result.getColumns()) {
         if (column instanceof Column || column instanceof Relation1T1) {
@@ -43,7 +43,7 @@ function map_row_to_object<T extends TableRef<K>, K extends Table>(row: mysql.Ro
                 column.setKeyValue(value);
             }
             if (!column.isKeyNull()) {
-                column.setValue(map_row_to_object(row, column.refTable, column.getJoinName(table.tableName)));
+                column.setValue(map_row_to_object(row, column.refTable, `J${counter[0]++}`, counter));
             }
         } else if (column instanceof Column) {
             if (column.getColumnType().validate(value)) {
@@ -65,7 +65,8 @@ async function post_process_row<T extends Table>(row: T, relation: Relation1TN<T
         nestTables: true
     });
     relation.setValue(await Promise.all(rows.map(async rowData => {
-        const row: Table = map_row_to_object(rowData, relation.refTable);
+        const counter: [number] = [1];
+        const row: Table = map_row_to_object(rowData, relation.refTable, relation.refTable.tableName, counter);
 
         for (const relation of row.get1TNRelations()) {
             await post_process_row(row, relation);
@@ -87,8 +88,8 @@ class BridgeImpl implements Bridge {
         if (rows.length == 0) {
             return null;
         }
-
-        const row: K = map_row_to_object<T, K>(rows[0], table);
+        const counter: [number] = [1];
+        const row: K = map_row_to_object<T, K>(rows[0], table, table.tableName, counter);
 
         for (const relation of row.get1TNRelations()) {
             await post_process_row(row, relation);
@@ -105,7 +106,8 @@ class BridgeImpl implements Bridge {
         });
 
         return Promise.all(rows.map(async rowData => {
-            const row: K = map_row_to_object<T, K>(rowData, table);
+            const counter: [number] = [1];
+            const row: K = map_row_to_object<T, K>(rowData, table, table.tableName, counter);
 
             for (const relation of row.get1TNRelations()) {
                 await post_process_row(row, relation);

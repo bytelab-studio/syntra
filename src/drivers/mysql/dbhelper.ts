@@ -55,56 +55,51 @@ export function construct_table_creation<T extends TableRef<K>, K extends Table>
     return `CREATE TABLE IF NOT EXISTS \`${table.tableName}\` (${items.join(",")}) ENGINE = InnoDB`;
 }
 
-function construct_table_join(table: Table, relation: IJoinable<Table>, asName: string | undefined = undefined): string {
+function construct_table_join(relation: IJoinable<Table>, outerName: string, count: [number]): string {
     const innerJoins: string[] = [];
     const refTable: Table = new relation.refTable();
+    const useName: string = `J${count}`;
+
     for (const innerRelation of refTable.get1T1Relations()) {
         if (innerRelation.loadingMethod != RelationLoad.DIRECT) {
             continue;
         }
 
-        innerJoins.push(construct_table_join(refTable, innerRelation, relation.getJoinName(table.tableName)));
+        count[0]++;
+        innerJoins.push(construct_table_join(innerRelation, useName, count));
     }
 
-    const useName: string = relation.getJoinName(table.tableName);
-    if (relation instanceof Relation1TN) {
-        return `RIGHT JOIN \`${relation.refTable.tableName}\` AS \`${useName}\` ON \`${asName || table.tableName}\`.\`${table.tableName + "_id"}\` = \`${useName}\`.\`${relation.refTable.tableName + "_id"}\` ${innerJoins.join(" ")}`;
-    } else {
-        return `JOIN \`${relation.refTable.tableName}\` AS \`${useName}\` ON \`${asName || table.tableName}\`.\`${relation.getColumnName()}\` = \`${useName}\`.\`${relation.refTable.tableName + "_id"}\` ${innerJoins.join(" ")}`;
-    }
+    return `JOIN \`${relation.refTable.tableName}\` AS \`${useName}\` ON \`${outerName}\`.\`${relation.getColumnName()}\` = \`${useName}\`.\`${relation.refTable.tableName + "_id"}\` ${innerJoins.join(" ")}`;
 }
 
 export function construct_select_single<T extends TableRef<K>, K extends Table>(template: T): string {
     const table: Table = new template();
 
     const joins: string[] = [];
+    let count: [number] = [0];
     for (const relation of table.get1T1Relations()) {
         if (relation.loadingMethod != RelationLoad.DIRECT) {
             continue;
         }
 
-        joins.push(construct_table_join(table, relation));
-    }
-    for (const relation of table.get1TNRelations()) {
-        if (relation.loadingMethod != RelationLoad.DIRECT) {
-            continue;
-        }
-
-        joins.push(construct_table_join(table, relation));
+        count[0]++;
+        joins.push(construct_table_join(relation, table.tableName, count));
     }
     return `SELECT * FROM \`${table.tableName}\` ${joins.join(" ")} WHERE \`${table.tableName}\`.\`${table.primaryKey.getColumnName()}\` = ?`;
 }
 
 export function construct_select_all<T extends TableRef<K>, K extends Table>(template: T): string {
     const table: Table = new template();
-
     const joins: string[] = [];
+
+    let count: [number] = [0];
     for (const relation of table.get1T1Relations()) {
         if (relation.loadingMethod != RelationLoad.DIRECT) {
             continue;
         }
 
-        joins.push(construct_table_join(table, relation));
+        count[0]++;
+        joins.push(construct_table_join(relation, table.tableName, count));
     }
 
     return `SELECT * FROM \`${table.tableName}\` ${joins.join(" ")}`;
