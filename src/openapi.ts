@@ -4,7 +4,8 @@ import {
     ColumnFlags,
     getTables,
     OpenAPISchemaBuilder,
-    PrimaryColumn, Relation1T1,
+    PrimaryColumn,
+    Relation1T1,
     Relation1TN,
     RelationLoad,
     SchemaDefinition,
@@ -33,7 +34,8 @@ const DELETE_RESULT = SchemaDefinition.define("DELETE_RESULT", {
         status: {
             type: "integer"
         }
-    }
+    },
+    required: ["status"]
 });
 
 function generateSelectResult(table: TableRef<Table>): SchemaDefinition {
@@ -52,13 +54,15 @@ function generateSelectResult(table: TableRef<Table>): SchemaDefinition {
                     $ref: SchemaDefinition.of(table, "select").location
                 }
             }
-        }
+        },
+        required: ["status", "count", "results"]
     });
 }
 
 function generateSelectModel(table: TableRef<Table>, builder: OpenApiBuilder): void {
     const row: Table = new table();
     const properties: { [p: string]: SchemaObject | ReferenceObject } = {};
+    const notNull: string[] = []
 
     for (const column of row.getColumns()) {
         if (column instanceof Column && column.containsFlag(ColumnFlags.PRIVATE)) {
@@ -80,11 +84,18 @@ function generateSelectModel(table: TableRef<Table>, builder: OpenApiBuilder): v
                 type: column.getColumnType().jsonType as SchemaObjectType | SchemaObjectType[],
                 format: format
             }
+            if (!column.containsFlag(ColumnFlags.NULLABLE)) {
+                notNull.push(column.getColumnName());
+            }
         }
         if (column instanceof Relation1T1 && column.loadingMethod == RelationLoad.DIRECT) {
             properties[column.columnRefName] = {
                 type: "object",
                 $ref: `#/components/schemas/${column.refTable.tableName + "_select"}`
+            }
+            if (!column.containsFlag(ColumnFlags.NULLABLE)) {
+                notNull.push(column.getColumnName());
+                notNull.push(column.columnRefName);
             }
         }
         if (column instanceof Relation1TN && column.loadingMethod == RelationLoad.DIRECT) {
@@ -94,12 +105,14 @@ function generateSelectModel(table: TableRef<Table>, builder: OpenApiBuilder): v
                     $ref: `#/components/schemas/${column.refTable.tableName + "_select"}`
                 }
             }
+            notNull.push(column.getColumnName());
         }
     }
 
     builder.addSchema(table.tableName + "_select", {
         type: "object",
-        properties: properties
+        properties: properties,
+        required: notNull,
     });
 }
 
