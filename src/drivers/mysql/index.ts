@@ -127,6 +127,10 @@ class BridgeImpl implements Bridge {
                 values: values
             });
             await connection.commit();
+
+            for (const relation of item.get1TNRelations()) {
+                await post_process_row(item, relation);
+            }
         } catch (e) {
             console.log(`Cannot update '${item.tableName}': ${e}`);
             await connection.rollback();
@@ -162,6 +166,10 @@ class BridgeImpl implements Bridge {
                 }
             }
             await connection.commit();
+
+            for (const relation of item.get1TNRelations()) {
+                await post_process_row(item, relation);
+            }
         } catch (e) {
             console.log(`Cannot insert into '${item.tableName}': ${e}`);
             await connection.rollback();
