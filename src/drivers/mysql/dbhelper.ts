@@ -109,6 +109,9 @@ export function construct_insert_single<K extends Table>(table: K): string {
     const names: string[] = [];
 
     for (const column of table.getColumns()) {
+        if (column instanceof Relation1TN) {
+            continue;
+        }
         names.push(column.getColumnName());
     }
 
