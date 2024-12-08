@@ -55,18 +55,18 @@ export function construct_table_creation<T extends TableRef<K>, K extends Table>
     return `CREATE TABLE IF NOT EXISTS \`${table.tableName}\` (${items.join(",")}) ENGINE = InnoDB`;
 }
 
-function construct_table_join(relation: IJoinable<Table>, outerName: string, count: [number]): string {
+function construct_table_join(relation: IJoinable<Table>, outerName: string, useName: string): string {
     const innerJoins: string[] = [];
     const refTable: Table = new relation.refTable();
-    const useName: string = `J${count}`;
 
+
+    let count = 1;
     for (const innerRelation of refTable.get1T1Relations()) {
         if (innerRelation.loadingMethod != RelationLoad.DIRECT) {
             continue;
         }
 
-        count[0]++;
-        innerJoins.push(construct_table_join(innerRelation, useName, count));
+        innerJoins.push(construct_table_join(innerRelation, useName, `${useName}${count++}`));
     }
 
     return `LEFT JOIN \`${relation.refTable.tableName}\` AS \`${useName}\` ON \`${outerName}\`.\`${relation.getColumnName()}\` = \`${useName}\`.\`${relation.refTable.tableName + "_id"}\` ${innerJoins.join(" ")}`;
@@ -76,14 +76,13 @@ export function construct_select_single<T extends TableRef<K>, K extends Table>(
     const table: Table = new template();
 
     const joins: string[] = [];
-    let count: [number] = [0];
+    let count: number = 1;
     for (const relation of table.get1T1Relations()) {
         if (relation.loadingMethod != RelationLoad.DIRECT) {
             continue;
         }
 
-        count[0]++;
-        joins.push(construct_table_join(relation, table.tableName, count));
+        joins.push(construct_table_join(relation, table.tableName, `J${count++}`));
     }
     return `SELECT * FROM \`${table.tableName}\` ${joins.join(" ")} WHERE \`${table.tableName}\`.\`${table.primaryKey.getColumnName()}\` = ?`;
 }
@@ -92,14 +91,13 @@ export function construct_select_all<T extends TableRef<K>, K extends Table>(tem
     const table: Table = new template();
     const joins: string[] = [];
 
-    let count: [number] = [0];
+    let count: number = 1;
     for (const relation of table.get1T1Relations()) {
         if (relation.loadingMethod != RelationLoad.DIRECT) {
             continue;
         }
 
-        count[0]++;
-        joins.push(construct_table_join(relation, table.tableName, count));
+        joins.push(construct_table_join(relation, table.tableName, `J${count++}`));
     }
 
     return `SELECT * FROM \`${table.tableName}\` ${joins.join(" ")}`;

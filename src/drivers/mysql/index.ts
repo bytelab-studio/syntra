@@ -23,9 +23,10 @@ function map_row_to_map(row: any): Map<string, any> {
     return map;
 }
 
-function map_row_to_object<T extends TableRef<K>, K extends Table>(row: mysql.RowDataPacket, table: T, entryName: string, counter: [number]): K {
+function map_row_to_object<T extends TableRef<K>, K extends Table>(row: mysql.RowDataPacket, table: T, outerName: string, isTopLevel: boolean): K {
     const result: K = new table() as K;
-    const tableData: Map<string, any> = map_row_to_map(row[entryName]);
+    const tableData: Map<string, any> = map_row_to_map(row[outerName]);
+    let counter: number = 1;
 
     for (const column of result.getColumns()) {
         if (column instanceof Column || column instanceof Relation1T1) {
@@ -43,7 +44,9 @@ function map_row_to_object<T extends TableRef<K>, K extends Table>(row: mysql.Ro
                 column.setKeyValue(value);
             }
             if (!column.isKeyNull()) {
-                column.setValue(map_row_to_object(row, column.refTable, `J${counter[0]++}`, counter));
+                column.setValue(map_row_to_object(row, column.refTable, isTopLevel ? `J${counter++}` : `${outerName}${counter++}`, false));
+            } else {
+                counter++;
             }
         } else if (column instanceof Column) {
             if (column.getColumnType().validate(value)) {
@@ -65,10 +68,12 @@ async function post_process_row<T extends Table>(row: T, relation: Relation1TN<T
         nestTables: true
     });
     relation.setValue(await Promise.all(rows.map(async rowData => {
-        const counter: [number] = [1];
-        const row: Table = map_row_to_object(rowData, relation.refTable, relation.refTable.tableName, counter);
+        const row: Table = map_row_to_object(rowData, relation.refTable, relation.refTable.tableName, true);
 
         for (const relation of row.get1TNRelations()) {
+            if (relation.isNull()) {
+                continue;
+            }
             await post_process_row(row, relation);
         }
 
@@ -88,10 +93,13 @@ class BridgeImpl implements Bridge {
         if (rows.length == 0) {
             return null;
         }
-        const counter: [number] = [1];
-        const row: K = map_row_to_object<T, K>(rows[0], table, table.tableName, counter);
+
+        const row: K = map_row_to_object<T, K>(rows[0], table, table.tableName, true);
 
         for (const relation of row.get1TNRelations()) {
+            if (relation.isNull()) {
+                continue;
+            }
             await post_process_row(row, relation);
         }
         return row;
@@ -106,10 +114,12 @@ class BridgeImpl implements Bridge {
         });
 
         return Promise.all(rows.map(async rowData => {
-            const counter: [number] = [1];
-            const row: K = map_row_to_object<T, K>(rowData, table, table.tableName, counter);
+            const row: K = map_row_to_object<T, K>(rowData, table, table.tableName, true);
 
             for (const relation of row.get1TNRelations()) {
+                if (relation.isNull()) {
+                    continue;
+                }
                 await post_process_row(row, relation);
             }
 
@@ -129,6 +139,9 @@ class BridgeImpl implements Bridge {
             await connection.commit();
 
             for (const relation of item.get1TNRelations()) {
+                if (relation.isNull()) {
+                    continue;
+                }
                 await post_process_row(item, relation);
             }
         } catch (e) {
@@ -168,6 +181,9 @@ class BridgeImpl implements Bridge {
             await connection.commit();
 
             for (const relation of item.get1TNRelations()) {
+                if (relation.isNull()) {
+                    continue;
+                }
                 await post_process_row(item, relation);
             }
         } catch (e) {
