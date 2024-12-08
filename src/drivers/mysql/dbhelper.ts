@@ -69,7 +69,7 @@ function construct_table_join(relation: IJoinable<Table>, outerName: string, cou
         innerJoins.push(construct_table_join(innerRelation, useName, count));
     }
 
-    return `JOIN \`${relation.refTable.tableName}\` AS \`${useName}\` ON \`${outerName}\`.\`${relation.getColumnName()}\` = \`${useName}\`.\`${relation.refTable.tableName + "_id"}\` ${innerJoins.join(" ")}`;
+    return `LEFT JOIN \`${relation.refTable.tableName}\` AS \`${useName}\` ON \`${outerName}\`.\`${relation.getColumnName()}\` = \`${useName}\`.\`${relation.refTable.tableName + "_id"}\` ${innerJoins.join(" ")}`;
 }
 
 export function construct_select_single<T extends TableRef<K>, K extends Table>(template: T): string {
