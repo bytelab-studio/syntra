@@ -72,6 +72,7 @@ async function post_process_row<T extends Table>(row: T, relation: Relation1TN<T
 
         for (const relation of row.get1TNRelations()) {
             if (relation.isNull()) {
+                relation.setValue([]);
                 continue;
             }
             await post_process_row(row, relation);
@@ -98,6 +99,7 @@ class BridgeImpl implements Bridge {
 
         for (const relation of row.get1TNRelations()) {
             if (relation.isNull()) {
+                relation.setValue([]);
                 continue;
             }
             await post_process_row(row, relation);
@@ -118,6 +120,7 @@ class BridgeImpl implements Bridge {
 
             for (const relation of row.get1TNRelations()) {
                 if (relation.isNull()) {
+                    relation.setValue([]);
                     continue;
                 }
                 await post_process_row(row, relation);
@@ -140,6 +143,7 @@ class BridgeImpl implements Bridge {
 
             for (const relation of item.get1TNRelations()) {
                 if (relation.isNull()) {
+                    relation.setValue([]);
                     continue;
                 }
                 await post_process_row(item, relation);
@@ -182,6 +186,7 @@ class BridgeImpl implements Bridge {
 
             for (const relation of item.get1TNRelations()) {
                 if (relation.isNull()) {
+                    relation.setValue([]);
                     continue;
                 }
                 await post_process_row(item, relation);
