@@ -160,26 +160,24 @@ class BridgeImpl implements Bridge {
             {
                 const query: string = dbhelper.construct_insert_single(permission);
                 const values: any[] = (Array.from(permission.getColumns()).filter(i => i instanceof Column || i instanceof Relation1T1) as (Column<unknown> | Relation1T1<Table>)[]).map(i => i instanceof Relation1T1 ? i.getKeyValue() : i.containsFlag(ColumnFlags.AUTO_INCREMENT) && i.isNull() ? null : i.getValue());
-                await connection.query({
+                const [insertResult]: [mysql.ResultSetHeader, mysql.FieldPacket[]] = await connection.query({
                     sql: query,
                     values: values
                 });
                 if (permission.primaryKey.isNull()) {
-                    const [rows]: [mysql.RowDataPacket[], mysql.FieldPacket[]] = await connection.query("SELECT LAST_INSERT_ID();");
-                    permission.primaryKey.setValue(rows[0]["LAST_INSERT_ID()"]);
+                    permission.primaryKey.setValue(insertResult.insertId);
                 }
             }
             item.permission.setValue(permission);
             {
                 const query: string = dbhelper.construct_insert_single(item);
                 const values: any[] = (Array.from(item.getColumns()).filter(i => i instanceof Column || i instanceof Relation1T1) as (Column<unknown> | Relation1T1<Table>)[]).map(i => i instanceof Relation1T1 ? i.getKeyValue() : i.containsFlag(ColumnFlags.AUTO_INCREMENT) && i.isNull() ? null : i.getValue());
-                await connection.query({
+                const [insertResult]: [mysql.ResultSetHeader, mysql.FieldPacket[]] = await connection.query({
                     sql: query,
                     values: values
                 });
                 if (item.primaryKey.isNull()) {
-                    const [rows]: [mysql.RowDataPacket[], mysql.FieldPacket[]] = await connection.query("SELECT LAST_INSERT_ID();");
-                    item.primaryKey.setValue(rows[0]["LAST_INSERT_ID()"]);
+                    item.primaryKey.setValue(insertResult.insertId);
                 }
             }
             await connection.commit();
