@@ -71,10 +71,6 @@ async function post_process_row<T extends Table>(row: T, relation: Relation1TN<T
         const row: Table = map_row_to_object(rowData, relation.refTable, relation.refTable.tableName, true);
 
         for (const relation of row.get1TNRelations()) {
-            if (relation.isNull()) {
-                relation.setValue([]);
-                continue;
-            }
             await post_process_row(row, relation);
         }
 
@@ -98,10 +94,6 @@ class BridgeImpl implements Bridge {
         const row: K = map_row_to_object<T, K>(rows[0], table, table.tableName, true);
 
         for (const relation of row.get1TNRelations()) {
-            if (relation.isNull()) {
-                relation.setValue([]);
-                continue;
-            }
             await post_process_row(row, relation);
         }
         return row;
@@ -119,10 +111,6 @@ class BridgeImpl implements Bridge {
             const row: K = map_row_to_object<T, K>(rowData, table, table.tableName, true);
 
             for (const relation of row.get1TNRelations()) {
-                if (relation.isNull()) {
-                    relation.setValue([]);
-                    continue;
-                }
                 await post_process_row(row, relation);
             }
 
@@ -142,10 +130,6 @@ class BridgeImpl implements Bridge {
             await connection.commit();
 
             for (const relation of item.get1TNRelations()) {
-                if (relation.isNull()) {
-                    relation.setValue([]);
-                    continue;
-                }
                 await post_process_row(item, relation);
             }
         } catch (e) {
@@ -183,10 +167,6 @@ class BridgeImpl implements Bridge {
             await connection.commit();
 
             for (const relation of item.get1TNRelations()) {
-                if (relation.isNull()) {
-                    relation.setValue([]);
-                    continue;
-                }
                 await post_process_row(item, relation);
             }
         } catch (e) {
