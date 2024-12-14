@@ -5,6 +5,7 @@ import * as path from "path";
 export const DEBUG: boolean = (process.env["DEBUG"] || "false") == "true"
 export const SWAGGER_UI: boolean = (process.env["SWAGGER_UI"] || "false") == "true"
 const JWT_SECRET_VALUE: string | undefined = process.env["JWT_SECRET"];
+const JWT_REFRESH_VALUE: string | undefined = process.env["JWT_REFRESH_VALUE"];
 export const HTTPS_PORT: number = parseInt(process.env["HTTPS_PORT"] || "0");
 export const HTTP_PORT: number = parseInt(process.env["HTTP_PORT"] || "0");
 export const DB_DRIVER: string = process.env["DB_DRIVER"]!;
@@ -22,6 +23,7 @@ if (!JWT_SECRET_VALUE) {
     process.exit(1);
 }
 export const JWT_SECRET: crypto.KeyObject = crypto.createSecretKey(Buffer.from(JWT_SECRET_VALUE, "utf8"));
+export const JWT_REFRESH: number = JWT_REFRESH_VALUE && !isNaN(parseInt(JWT_REFRESH_VALUE)) ? parseInt(JWT_REFRESH_VALUE) : 900; // 15min
 export const LOGIN_CERT = crypto.generateKeyPairSync("rsa", {
     modulusLength: 2048,
     publicKeyEncoding: {
