@@ -220,9 +220,9 @@ class BridgeImpl implements Bridge {
     }
 }
 
-let connection: mysql.Connection;
+let connection: mysql.Pool;
 
-export async function setConnection(conn: mysql.Connection): Promise<void> {
+export async function setConnection(conn: mysql.Pool): Promise<void> {
     if (!conn.config.database) {
         throw "A database must be selected";
     }
@@ -254,6 +254,7 @@ const DB_DATABASE: string | undefined = process.env["DB_DATABASE"];
 const DB_USER: string | undefined = process.env["DB_USER"];
 const DB_PASSWORD: string | undefined = process.env["DB_PASSWORD"] || "";
 const DB_PORT_VALUE: string | undefined = process.env["DB_PORT"];
+const DB_POOL_LIMIT_VALUE: string | undefined = process.env["DB_POOL_LIMIT"] || "10";
 
 if (!DB_HOST) {
     console.log("Required environment variable 'DB_HOST' is not provided");
@@ -268,21 +269,26 @@ if (!DB_USER) {
     process.exit(1);
 }
 if (!DB_PORT_VALUE || isNaN(parseInt(DB_PORT_VALUE))) {
-    console.log("Required environment variable 'DB_PORT' is not provided");
+    console.log("Environment variable 'DB_PORT' is not provided or is not an integer");
+    process.exit(1);
+}
+if (isNaN(parseInt(DB_POOL_LIMIT_VALUE))) {
+    console.log("Environment variable 'DB_POOL_LIMIT' is not provided or is not an integer");
     process.exit(1);
 }
 const DB_PORT: number = parseInt(DB_PORT_VALUE);
+const DB_POOL_LIMIT: number = parseInt(DB_POOL_LIMIT_VALUE);
 
-
-mysql.createConnection({
-    host: DB_HOST,
-    database: DB_DATABASE,
-    user: DB_USER,
-    port: DB_PORT,
-    password: DB_PASSWORD
-}).then(async (c) => {
+(async () => {
     console.log("MySQL connect")
-    await setConnection(c);
+    await setConnection(mysql.createPool({
+        host: DB_HOST,
+        database: DB_DATABASE,
+        user: DB_USER,
+        port: DB_PORT,
+        password: DB_PASSWORD,
+        connectionLimit: DB_POOL_LIMIT
+    }));
     console.log("MySQL connect finished");
 
     console.log("Create table");
@@ -296,6 +302,5 @@ mysql.createConnection({
         await table.events.afterCreate.emit();
     }
     console.log("Create table finished");
-});
-
-setBridge(new BridgeImpl());
+    setBridge(new BridgeImpl());
+})();
