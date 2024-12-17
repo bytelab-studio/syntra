@@ -8,6 +8,10 @@ const JWT_SECRET_VALUE: string | undefined = process.env["JWT_SECRET"];
 export const HTTPS_PORT: number = parseInt(process.env["HTTPS_PORT"] || "0");
 export const HTTP_PORT: number = parseInt(process.env["HTTP_PORT"] || "0");
 export const DB_DRIVER: string = process.env["DB_DRIVER"]!;
+export const SWAGGER_TITLE: string = process.env["SWAGGER_TITLE"] || "API";
+export const SWAGGER_DESCRIPTION: string = process.env["SWAGGER_DESCRIPTION"] || "";
+export const SWAGGER_VERSION: string = process.env["SWAGGER_VERSION"] || "1.0.0";
+
 if (!DB_DRIVER) {
     console.log("Required environment variable 'DB_DRIVER' is not provided");
     process.exit(1);

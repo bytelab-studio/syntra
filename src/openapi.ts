@@ -13,6 +13,7 @@ import {
     Table,
     TableRef
 } from "@bytelab.studio/syntra.plugin";
+import * as flags from "./flags";
 
 const PERMISSION_OBJECT = SchemaDefinition.define("PERMISSION_OBJECT", {
     type: "object",
@@ -209,9 +210,9 @@ export function generateOAS(): string {
         .create()
         .addOpenApiVersion("3.0.1")
         .addInfo({
-            title: "APP",
-            description: "BLABLABLA",
-            version: "1.0.0"
+            title: flags.SWAGGER_TITLE,
+            description: flags.SWAGGER_DESCRIPTION,
+            version: flags.SWAGGER_VERSION
         })
         .addTitle("APP")
         .addSecurityScheme("bearerAuth", {
