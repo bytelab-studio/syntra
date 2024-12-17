@@ -55,8 +55,9 @@ When running Syntra, you can configure the following environment variables:
 | DEBUG               | 'true' \| 'false' | Enables debugging mode, which disables security features like HTTPS and an encrypted hash at login | no       |
 | HTTP_PORT           | number            | Sets the HTTP port                                                                                 | yes      |
 | HTTPS_PORT          | number            | Sets the HTTPS Port                                                                                | no       |
-| DB_DRIVER           | 'mysql'           | Specifies the [DB Driver](./02-db-drivers.md)                                                      | yes      |
+| DB_DRIVER           | 'mysql'           | Specifies the DB Driver                                                                            | yes      |
 | JWT_SECRET          | string            | A secret key for signing JWTs (for more information, visit [jwt.io](https://jwt.io))               | yes      |
+| JWT_REFRESH         | number | A period of time in seconds during which the token can be refreshed after it expires.                         | no       |
 | SWAGGER_UI          | 'true' \| 'false' | Enables the Swagger UI                                                                             | no       |
 | SWAGGER_TITLE       | string            | Sets the Swagger UI Title                                                                          | no       |
 | SWAGGER_DESCRIPTION | string            | Sets the Swagger UI Description                                                                    | no       |
@@ -107,6 +108,7 @@ after setup.
 2. Use the provided UI to change the password for the root account:
 
 #### Tips for a Strong Password
+
 - Use at least 12 characters.
 - Include a mix of uppercase and lowercase letters, numbers, and symbols.
 - Avoid common words, phrases, or easily guessable patterns.
@@ -116,8 +118,10 @@ To achive this open `http:localhost:<port>/authentication/change_psw/visual` in 
 change any password of any account.
 
 #### Important Note
+
 - Once the password is changed, ensure it is stored securely (e.g., in a password manager).
-- Avoid sharing the root account credentials. For routine operations, create and use non-root accounts with appropriate permissions.
+- Avoid sharing the root account credentials. For routine operations, create and use non-root accounts with appropriate
+  permissions.
 
 ## Pre-Defined Tables
 

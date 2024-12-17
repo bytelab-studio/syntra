@@ -164,6 +164,36 @@ Authentication.routes.post(builder => {
     });
 });
 
+Authentication.routes.post(builder => {
+    builder.addResponse(200, LOGIN_RESPONSE);
+}, "/refresh", async (req, res) => {
+    if (!req.authorization.auth || !req.headers.token) {
+        return res.unauthorized();
+    }
+    const token: string = req.headers.token;
+    const payload: any = JSON.parse(Buffer.from(token.split(".")[1], "base64").toString("utf-8"));
+    if (!("exp" in payload) || typeof payload.exp != "number") {
+        return res.unauthorized();
+    }
+
+    if (payload.exp + flags.JWT_REFRESH > Date.now() / 1000) {
+        return res.unauthorized();
+    }
+
+    delete payload.exp;
+
+    const refreshedToken: string = await new jwt.SignJWT(payload)
+        .setProtectedHeader({
+            alg: "HS512"
+        })
+        .setExpirationTime("30min")
+        .sign(flags.JWT_SECRET);
+
+    return res.ok({
+        token: refreshedToken
+    });
+});
+
 const PASSWORD_CHANGE_MODEL: SchemaDefinition = SchemaDefinition.define("password_change_model", {
     type: "object",
     properties: {

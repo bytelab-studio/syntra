@@ -10,7 +10,7 @@ import {
     ResponseContent,
     Authentication,
     AuthorizationHandler,
-    ParamsHandler
+    ParamsHandler, HeaderHandler
 } from "@bytelab.studio/syntra.plugin";
 
 import * as express from "express";
@@ -62,9 +62,15 @@ async function constructRequest(req: express.Request): Promise<Request> {
         authorization = new AuthorizationHandler(undefined, !!req.headers.authorization);
     }
 
+    let headers: HeaderHandler = new HeaderHandler(Object.entries(req.headers).reduce((a, [name, value]) => {
+        a[name.toLowerCase()] = value;
+        return a;
+    }, {} as any));
+
     return {
         body,
         authorization,
+        headers: headers,
         params: new ParamsHandler(req.params)
     }
 }
