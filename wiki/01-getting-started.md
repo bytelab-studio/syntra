@@ -50,15 +50,18 @@ npm start
 
 When running Syntra, you can configure the following environment variables:
 
-| Key         | Value             | Description                                                                                        | Required |
-|-------------|-------------------|----------------------------------------------------------------------------------------------------|----------|
-| DEBUG       | 'true' \| 'false' | Enables debugging mode, which disables security features like HTTPS and an encrypted hash at login | no       |
-| HTTP_PORT   | number            | Sets the HTTP port                                                                                 | yes      |
-| HTTPS_PORT  | number            | Sets the HTTPS Port                                                                                | no       |
-| DB_DRIVER   | 'mysql'           | Specifies the DB Driver                                                                            | yes      |
-| JWT_SECRET  | string            | A secret key for signing JWTs (for more information, visit [jwt.io](https://jwt.io))               | yes      |
-| JWT_REFRESH | number            | A period of time in seconds during which the token can be refreshed after it expires.              | no       |
-| SWAGGER_UI  | 'true' \| 'false' | Enables the Swagger UI                                                                             | no       |
+| Key                 | Value             | Description                                                                                        | Required |
+|---------------------|-------------------|----------------------------------------------------------------------------------------------------|----------|
+| DEBUG               | 'true' \| 'false' | Enables debugging mode, which disables security features like HTTPS and an encrypted hash at login | no       |
+| HTTP_PORT           | number            | Sets the HTTP port                                                                                 | yes      |
+| HTTPS_PORT          | number            | Sets the HTTPS Port                                                                                | no       |
+| DB_DRIVER           | 'mysql'           | Specifies the DB Driver                                                                            | yes      |
+| JWT_SECRET          | string            | A secret key for signing JWTs (for more information, visit [jwt.io](https://jwt.io))               | yes      |
+| JWT_REFRESH         | number | A period of time in seconds during which the token can be refreshed after it expires.                         | no       |
+| SWAGGER_UI          | 'true' \| 'false' | Enables the Swagger UI                                                                             | no       |
+| SWAGGER_TITLE       | string            | Sets the Swagger UI Title                                                                          | no       |
+| SWAGGER_DESCRIPTION | string            | Sets the Swagger UI Description                                                                    | no       |
+| SWAGGER_VERSION     | string            | Sets the Swagger UI API Version                                                                    | no       |
 
 In addition to the general variables, DB driver-specific variables need to be set depending on your database system. For
 example, if using MySQL, you might need:
