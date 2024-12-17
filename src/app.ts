@@ -148,6 +148,9 @@ Authentication.routes.post(builder => {
     if (!auth) {
         return res.unauthorized("User could not be found");
     }
+	if (auth.deactivated.getValue()) {
+		return res.unauthorized("User is deactivated");
+	}
     if (auth.password.getValue() != hash) {
         return res.unauthorized("Password is incorrect");
     }
@@ -242,6 +245,9 @@ Authentication.routes.post(builder => {
     if (!auth) {
         return res.unauthorized("User could not be found");
     }
+	if (auth.deactivated.getValue()) {
+		return res.unauthorized("User is deactivated");
+	}
     if (auth.password.getValue() != hash) {
         return res.unauthorized("Password is incorrect");
     }
