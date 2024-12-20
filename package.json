@@ -22,7 +22,7 @@
         "syntra": "out/app.js"
     },
     "dependencies": {
-        "@bytelab.studio/syntra.plugin": "^0.1.0",
+        "@bytelab.studio/syntra.plugin": "^0.1.1",
         "cors": "^2.8.5",
         "express": "^4.21.0",
         "jose": "^5.9.4",
