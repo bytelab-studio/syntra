@@ -223,11 +223,7 @@ class BridgeImpl implements Bridge {
 let connection: mysql.Pool;
 
 export async function setConnection(conn: mysql.Pool): Promise<void> {
-    if (!conn.config.database) {
-        throw "A database must be selected";
-    }
     connection = conn;
-    await connection.connect();
 }
 
 export async function declareTable<T extends TableRef<K>, K extends Table>(table: T): Promise<void> {
@@ -244,7 +240,7 @@ export async function declareTable<T extends TableRef<K>, K extends Table>(table
 }
 
 export async function getDeclaredTables(): Promise<string[]> {
-    const database: string = connection.config.database!
+    const database: string = DB_DATABASE!
     const [rows, _]: [mysql.RowDataPacket[], mysql.FieldPacket[]] = await connection.query("SELECT table_name, auto_increment FROM information_schema.tables WHERE table_schema = ?", [database]);
     return rows.map(r => r["table_name"]);
 }
