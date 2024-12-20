@@ -61,12 +61,14 @@ function map_row_to_object<T extends TableRef<K>, K extends Table>(row: mysql.Ro
 }
 
 async function post_process_row<T extends Table>(row: T, relation: Relation1TN<Table>): Promise<void> {
+    const connection: mysql.PoolConnection = await pool.getConnection();
     const query: string = dbhelper.construct_1_to_n(relation);
     const [rows]: [mysql.RowDataPacket[], mysql.FieldPacket[]] = await connection.query<mysql.RowDataPacket[]>({
         sql: query,
         values: [row.primaryKey.getValue()],
         nestTables: true
     });
+    connection.release();
     relation.setValue(await Promise.all(rows.map(async rowData => {
         const row: Table = map_row_to_object(rowData, relation.refTable, relation.refTable.tableName, true);
 
@@ -80,12 +82,14 @@ async function post_process_row<T extends Table>(row: T, relation: Relation1TN<T
 
 class BridgeImpl implements Bridge {
     async selectSingle<T extends TableRef<K>, K extends Table>(table: T, id: number): Promise<K | null> {
+        const connection: mysql.PoolConnection = await pool.getConnection();
         const query: string = dbhelper.construct_select_single(table);
         const [rows]: [mysql.RowDataPacket[], mysql.FieldPacket[]] = await connection.query<mysql.RowDataPacket[]>({
             sql: query,
             values: [id],
             nestTables: true
         });
+        connection.release();
 
         if (rows.length == 0) {
             return null;
@@ -100,12 +104,14 @@ class BridgeImpl implements Bridge {
     }
 
     async selectAll<T extends TableRef<K>, K extends Table>(table: T): Promise<K[]> {
+        const connection: mysql.PoolConnection = await pool.getConnection();
         const query: string = dbhelper.construct_select_all(table);
         const [rows]: [mysql.RowDataPacket[], mysql.FieldPacket[]] = await connection.query<mysql.RowDataPacket[]>({
             sql: query,
             values: [],
             nestTables: true
         });
+        connection.release();
 
         return Promise.all(rows.map(async rowData => {
             const row: K = map_row_to_object<T, K>(rowData, table, table.tableName, true);
@@ -119,6 +125,7 @@ class BridgeImpl implements Bridge {
     }
 
     async update<K extends Table>(item: K): Promise<void> {
+        const connection: mysql.PoolConnection = await pool.getConnection();
         try {
             await connection.beginTransaction();
             const query: string = dbhelper.construct_update(item);
@@ -128,17 +135,19 @@ class BridgeImpl implements Bridge {
                 values: values
             });
             await connection.commit();
-
+            connection.release();
             for (const relation of item.get1TNRelations()) {
                 await post_process_row(item, relation);
             }
         } catch (e) {
             console.log(`Cannot update '${item.tableName}': ${e}`);
             await connection.rollback();
+            connection.release();
         }
     }
 
     async insert<K extends Table>(item: K, permission: Permission): Promise<void> {
+        const connection: mysql.PoolConnection = await pool.getConnection();
         try {
             await connection.beginTransaction();
             {
@@ -165,6 +174,7 @@ class BridgeImpl implements Bridge {
                 }
             }
             await connection.commit();
+            connection.release();
 
             for (const relation of item.get1TNRelations()) {
                 await post_process_row(item, relation);
@@ -172,10 +182,12 @@ class BridgeImpl implements Bridge {
         } catch (e) {
             console.log(`Cannot insert into '${item.tableName}': ${e}`);
             await connection.rollback();
+            connection.release();
         }
     }
 
     async delete<K extends Table>(item: K): Promise<void> {
+        const connection: mysql.PoolConnection = await pool.getConnection();
         try {
             await connection.beginTransaction();
             {
@@ -193,13 +205,16 @@ class BridgeImpl implements Bridge {
                 });
             }
             await connection.commit();
+            connection.release();
         } catch (e) {
             console.log(`Cannot delete '${item.tableName}': ${e}`);
             await connection.rollback();
+            connection.release();
         }
     }
 
     async rowExist<K extends Table>(item: K): Promise<boolean> {
+        const connection: mysql.PoolConnection = await pool.getConnection();
         try {
             if (item.primaryKey.isNull()) {
                 return false;
@@ -211,37 +226,44 @@ class BridgeImpl implements Bridge {
                 values: [item.primaryKey.getValue()]
             });
             await connection.commit();
+            connection.release();
             return rows.length > 0 && rows[0]["x"] == 1;
         } catch (e) {
             await connection.rollback();
+            connection.release();
             console.log(`Cannot select '${item.tableName}': ${e}`);
             throw `Cannot select '${item.tableName}': ${e}`;
         }
     }
 }
 
-let connection: mysql.Pool;
+let pool: mysql.Pool;
 
-export async function setConnection(conn: mysql.Pool): Promise<void> {
-    connection = conn;
+async function setPool(p: mysql.Pool): Promise<void> {
+    pool = p;
 }
 
 export async function declareTable<T extends TableRef<K>, K extends Table>(table: T): Promise<void> {
     const query: string = dbhelper.construct_table_creation(table);
+    const connection: mysql.PoolConnection = await pool.getConnection();
     try {
         console.log(`Declare table ${table.tableName}`);
         await connection.beginTransaction();
         await connection.query(query);
         await connection.commit();
+        connection.release();
     } catch (e) {
         console.log(`Cannot create table '${table.tableName}': ${e}`);
         await connection.rollback();
+        connection.release();
     }
 }
 
 export async function getDeclaredTables(): Promise<string[]> {
     const database: string = DB_DATABASE!
+    const connection: mysql.PoolConnection = await pool.getConnection();
     const [rows, _]: [mysql.RowDataPacket[], mysql.FieldPacket[]] = await connection.query("SELECT table_name, auto_increment FROM information_schema.tables WHERE table_schema = ?", [database]);
+    connection.release();
     return rows.map(r => r["table_name"]);
 }
 
@@ -277,7 +299,7 @@ const DB_POOL_LIMIT: number = parseInt(DB_POOL_LIMIT_VALUE);
 
 (async () => {
     console.log("MySQL connect")
-    await setConnection(mysql.createPool({
+    await setPool(mysql.createPool({
         host: DB_HOST,
         database: DB_DATABASE,
         user: DB_USER,
@@ -286,6 +308,7 @@ const DB_POOL_LIMIT: number = parseInt(DB_POOL_LIMIT_VALUE);
         connectionLimit: DB_POOL_LIMIT
     }));
     console.log("MySQL connect finished");
+    setBridge(new BridgeImpl());
 
     console.log("Create table");
     const declaredTables: string[] = await getDeclaredTables();
@@ -298,5 +321,4 @@ const DB_POOL_LIMIT: number = parseInt(DB_POOL_LIMIT_VALUE);
         await table.events.afterCreate.emit();
     }
     console.log("Create table finished");
-    setBridge(new BridgeImpl());
 })();
