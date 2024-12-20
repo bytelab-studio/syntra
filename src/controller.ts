@@ -71,7 +71,7 @@ async function constructRequest(req: express.Request): Promise<Request> {
         body,
         authorization,
         headers: headers,
-        params: new ParamsHandler(req.params)
+        params: new ParamsHandler(req.query)
     }
 }
 
