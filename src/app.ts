@@ -179,11 +179,12 @@ Authentication.routes.post(builder => {
         return res.unauthorized();
     }
 
-    if (payload.exp + flags.JWT_REFRESH > Date.now() / 1000) {
+    if (payload.exp + flags.JWT_REFRESH <= Date.now() / 1000) {
         return res.unauthorized();
     }
 
     delete payload.exp;
+    delete payload.iat;
 
     const refreshedToken: string = await new jwt.SignJWT(payload)
         .setProtectedHeader({
