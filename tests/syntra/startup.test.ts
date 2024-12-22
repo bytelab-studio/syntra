@@ -67,7 +67,9 @@ describe("Server", () => {
                 username: "root",
                 hash: hash
             });
-        })()).rejects.toBeTruthy();
+        })()).rejects.toMatchObject({
+            cause: 401,
+        });
     });
     test("authentication with wrong username", async () => {
         await expect((async (): Promise<void> => {
@@ -79,7 +81,9 @@ describe("Server", () => {
             expect(data).toHaveProperty("token");
             expect(typeof data.token).toEqual("string");
             expect(data.token.length).toBeGreaterThan(0);
-        })()).rejects.toBeTruthy();
+        })()).rejects.toMatchObject({
+            cause: 401,
+        });
     });
 });
 
