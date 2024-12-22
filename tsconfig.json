@@ -9,5 +9,8 @@
         "outDir": "out",
         "downlevelIteration": true,
         "experimentalDecorators": true
-    }
+    },
+    "exclude": [
+        "tests"
+    ]
 }
