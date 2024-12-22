@@ -1,0 +1,69 @@
+name: Test Pipeline
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:latest
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+          MYSQL_DATABASE: unittests
+    steps:
+      - name: Setup NodeJS v16
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          registry-url: https://registry.npmjs.org
+      - name: Checkout Syntra
+        uses: actions/checkout@v3
+        with:
+          path: syntra
+      - name: Checkout Syntra.Plugin
+        uses: actions/checkout@v3
+        with:
+          path: syntra.plugin
+          repository: https://github.com/bytelab-studio/syntra.plugin.git
+      - name: Install TypeScript
+        run: npm install -g typescript
+      - name: Install packages Syntra.Plugin
+        working-directory: syntra.plugin
+        run: npm ci
+      - name: Compile Syntra.Plugin
+        working-directory: syntra.plugin
+        run: tsc
+      - name: Pack Syntra.Plugin
+        working-directory: syntra.plugin
+        run: |
+          tarball=$(npm pack)
+          echo "TARBALL_NAME=$tarball" >> $GITHUB_ENV
+      - name: Install packages Syntra
+        working-directory: syntra
+        run: npm ci
+      - name: Install Syntra.Plugin
+        working-directory: syntra
+        run: |
+          npm uninstall "@bytelab.studio/syntra.plugin"
+          npm install ../syntra.plugin/$TARBALL_NAME
+      - name: Compile Syntra
+        working-directory: syntra
+        run: tsc
+      - name: Test
+        working-directory: syntra
+        run: npm test
