@@ -1,11 +1,15 @@
-import {get, post, importServer, getToken} from "./utils/http";
+import {get, post, startServer, stopServer, getToken} from "./utils/http";
 import {encrypt} from "./utils/encryption";
 
 jest.setTimeout(60000);
 
 beforeAll(async () => {
-    importServer();
+    startServer();
     await new Promise((resolve) => setTimeout(resolve, 10000)); // Wait for 10 seconds
+});
+
+afterAll(() => {
+    stopServer();
 });
 
 describe("Server", () => {

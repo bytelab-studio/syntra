@@ -1,24 +1,34 @@
-const PORT: string = "8080";
-process.env = {
-    ...process.env,
-    ...{
-        DB_DATABASE: "unittest",
-        DB_DRIVER: "mysql",
-        DB_HOST: "localhost",
-        DB_PORT: "3306",
-        DB_USER: "root",
-        DEBUG: "true",
+import * as child_process from "child_process";
+import * as path from "path";
 
-        HTTP_PORT: PORT,
-        JWT_SECRET: "1234567890",
-        SWAGGER_UI: "true"
-    }
+const PORT: string = "8080";
+let server: child_process.ChildProcessWithoutNullStreams;
+
+export function startServer(): void {
+    server = child_process.spawn("node", [
+        "out/app.js"
+    ], {
+        cwd: path.join(__dirname, "..", "..", ".."),
+        env: {
+            DB_DATABASE: "unittest",
+            DB_DRIVER: "mysql",
+            DB_HOST: "localhost",
+            DB_PORT: "3306",
+            DB_USER: "root",
+            DEBUG: "true",
+            HTTP_PORT: PORT,
+            JWT_SECRET: "1234567890"
+        }
+    });
+    server.on("data", (chunk: Buffer) => {
+        console.log(chunk.toString());
+    });
 }
 
-process.on("uncaughtException", (err) => void 0);
-
-export function importServer(): void {
-    require("../../../out/app");
+export function stopServer(): void {
+    if (!server.killed) {
+        server.kill();
+    }
 }
 
 export let BASE_URL = `http://localhost:${PORT}`;
@@ -47,7 +57,9 @@ async function httpRequest(url: string, options: RequestOptions): Promise<Respon
     });
 
     if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status} ${await response.text()}`);
+        throw new Error(`HTTP error! Status: ${response.status} ${await response.text()}`, {
+            cause: response.status
+        });
     }
     return response;
 }
