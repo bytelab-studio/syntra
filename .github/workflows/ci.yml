@@ -29,7 +29,7 @@ jobs:
       - name: Setup NodeJS v16
         uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 18
           registry-url: https://registry.npmjs.org
       - name: Checkout Syntra
         uses: actions/checkout@v3
