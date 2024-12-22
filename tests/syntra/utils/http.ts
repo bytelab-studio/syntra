@@ -18,7 +18,7 @@ process.env = {
 process.on("uncaughtException", (err) => void 0);
 
 export function importServer(): void {
-    require("../../out/app");
+    require("../../../out/app");
 }
 
 export let BASE_URL = `http://localhost:${PORT}`;
