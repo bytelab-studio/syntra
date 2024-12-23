@@ -24,6 +24,7 @@
     "dependencies": {
         "@bytelab.studio/syntra.plugin": "^0.1.2",
         "cors": "^2.8.5",
+        "dotenv": "^16.4.7",
         "express": "^4.21.0",
         "jose": "^5.9.4",
         "morgan": "^1.10.0",
