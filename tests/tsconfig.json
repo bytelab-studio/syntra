@@ -6,11 +6,7 @@
         "forceConsistentCasingInFileNames": true,
         "strict": true,
         "skipLibCheck": true,
-        "outDir": "out",
         "downlevelIteration": true,
-        "experimentalDecorators": true
-    },
-    "exclude": [
-        "tests"
-    ]
+        "noEmit": true
+    }
 }

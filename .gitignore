@@ -2,5 +2,5 @@
 dec
 node_modules
 out
+tests/**/*.js
 *.tgz
-tests
