@@ -20,9 +20,6 @@ export function startServer(): void {
             JWT_SECRET: "1234567890"
         }
     });
-    server.on("data", (chunk: Buffer) => {
-        console.log(chunk.toString());
-    });
 }
 
 export function stopServer(): void {
@@ -31,7 +28,7 @@ export function stopServer(): void {
     }
 }
 
-export let BASE_URL = `http://localhost:${PORT}`;
+export let BASE_URL = `http://127.0.0.1:${PORT}`;
 
 type RequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
