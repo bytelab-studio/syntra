@@ -2,6 +2,10 @@ import crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 
+import {config} from "dotenv";
+
+config();
+
 export const DEBUG: boolean = (process.env["DEBUG"] || "false") == "true"
 export const SWAGGER_UI: boolean = (process.env["SWAGGER_UI"] || "false") == "true"
 const JWT_SECRET_VALUE: string | undefined = process.env["JWT_SECRET"];
