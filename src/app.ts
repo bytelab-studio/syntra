@@ -326,15 +326,15 @@ getTables().forEach(table => {
 
                 if ("permission" in body) {
                     const readLevel: PermissionLevel | undefined =
-                        typeof PermissionLevel[body.permission.read_level] == "undefined"
+                        typeof PermissionLevel[body.permission.read_level] != "undefined"
                             ? body.permission.read_level
                             : undefined;
                     const writeLevel: PermissionLevel | undefined =
-                        typeof PermissionLevel[body.permission.write_level] == "undefined"
+                        typeof PermissionLevel[body.permission.write_level] != "undefined"
                             ? body.permission.write_level
                             : undefined;
                     const deleteLevel: PermissionLevel | undefined =
-                        typeof PermissionLevel[body.permission.delete_level] == "undefined"
+                        typeof PermissionLevel[body.permission.delete_level] != "undefined"
                             ? body.permission.delete_level
                             : undefined;
 
