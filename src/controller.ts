@@ -54,9 +54,8 @@ async function constructRequest(req: express.Request): Promise<Request> {
         try {
             const token: string = req.headers.authorization.slice(7);
             const {payload} = await jwt.jwtVerify(token, flags.JWT_SECRET);
-            const auth = new Authentication();
-            auth.primaryKey.setValue(payload["auth_id"] as number);
-            authorization = new AuthorizationHandler(auth, false);
+            const auth: Authentication | null = await Authentication.select(Authentication.root, payload["auth_id"] as number);
+            authorization = new AuthorizationHandler(auth as Authentication | undefined, !auth)
         } catch {
             authorization = new AuthorizationHandler(undefined, true);
         }
