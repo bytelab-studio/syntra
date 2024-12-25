@@ -1,6 +1,6 @@
 {
     "name": "@bytelab.studio/syntra",
-    "version": "0.1.2",
+    "version": "0.2.0",
     "description": "A modular RESTful API Server",
     "main": "",
     "author": "Christoph Koschel",
@@ -22,7 +22,7 @@
         "syntra": "out/app.js"
     },
     "dependencies": {
-        "@bytelab.studio/syntra.plugin": "^0.1.2",
+        "@bytelab.studio/syntra.plugin": "^0.2.0",
         "cors": "^2.8.5",
         "dotenv": "^16.4.7",
         "express": "^4.21.0",
