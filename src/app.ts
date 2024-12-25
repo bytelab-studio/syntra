@@ -326,15 +326,15 @@ getTables().forEach(table => {
 
                 if ("permission" in body) {
                     const readLevel: PermissionLevel | undefined =
-                        typeof PermissionLevel[body.permission.read_level] == "undefined"
+                        typeof PermissionLevel[body.permission.read_level] != "undefined"
                             ? body.permission.read_level
                             : undefined;
                     const writeLevel: PermissionLevel | undefined =
-                        typeof PermissionLevel[body.permission.write_level] == "undefined"
+                        typeof PermissionLevel[body.permission.write_level] != "undefined"
                             ? body.permission.write_level
                             : undefined;
                     const deleteLevel: PermissionLevel | undefined =
-                        typeof PermissionLevel[body.permission.delete_level] == "undefined"
+                        typeof PermissionLevel[body.permission.delete_level] != "undefined"
                             ? body.permission.delete_level
                             : undefined;
 
@@ -426,8 +426,8 @@ app.all("*", (req, res) =>
 );
 
 if (!!httpServer) {
-    httpServer.listen(flags.HTTP_PORT);
+    httpServer.listen(flags.HTTP_PORT, "127.0.0.1");
 }
 if (!!httpsServer && !flags.DEBUG) {
-    httpsServer.listen(flags.HTTPS_PORT);
+    httpsServer.listen(flags.HTTPS_PORT, "127.0.0.1");
 }
