@@ -56,6 +56,9 @@ async function constructRequest(req: express.Request): Promise<Request> {
             const {payload} = await jwt.jwtVerify(token, flags.JWT_SECRET);
             const auth = new Authentication();
             auth.primaryKey.setValue(payload["auth_id"] as number);
+            auth.canRead.setValue(payload["read"] as boolean);
+            auth.canWrite.setValue(payload["write"] as boolean);
+            auth.canDelete.setValue(payload["delete"] as boolean);
             authorization = new AuthorizationHandler(auth, false);
         } catch {
             authorization = new AuthorizationHandler(undefined, true);

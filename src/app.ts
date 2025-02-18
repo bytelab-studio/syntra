@@ -10,19 +10,19 @@ import * as https from "https";
 import * as fs from "fs";
 import * as crypto from "crypto";
 
-import express from "express";
-import {Express, Request, Response} from "express";
+import express, {Express, Request, Response} from "express";
 import cors from "cors";
 import morgan from "morgan";
 import * as jwt from "jose";
 import {
-    getTables,
     Authentication,
-    Table,
+    Column,
     ColumnFlags,
-    PermissionLevel, SchemaDefinition, Column,
+    getTables,
+    PermissionLevel,
+    SchemaDefinition,
+    Table,
 } from "@bytelab.studio/syntra.plugin";
-
 
 if (flags.DEBUG) {
     console.log()
@@ -148,14 +148,17 @@ Authentication.routes.post(builder => {
     if (!auth) {
         return res.unauthorized("User could not be found");
     }
-	if (auth.deactivated.getValue()) {
-		return res.unauthorized("User is deactivated");
-	}
+    if (auth.deactivated.getValue()) {
+        return res.unauthorized("User is deactivated");
+    }
     if (auth.password.getValue() != hash) {
         return res.unauthorized("Password is incorrect");
     }
     const token: string = await new jwt.SignJWT({
-        auth_id: auth.primaryKey.getValue()
+        auth_id: auth.primaryKey.getValue(),
+        read: auth.canRead.getValue(),
+        write: auth.canWrite.getValue(),
+        delete: auth.canDelete.getValue()
     })
         .setProtectedHeader({
             alg: "HS512"
@@ -246,9 +249,9 @@ Authentication.routes.post(builder => {
     if (!auth) {
         return res.unauthorized("User could not be found");
     }
-	if (auth.deactivated.getValue()) {
-		return res.unauthorized("User is deactivated");
-	}
+    if (auth.deactivated.getValue()) {
+        return res.unauthorized("User is deactivated");
+    }
     if (auth.password.getValue() != hash) {
         return res.unauthorized("Password is incorrect");
     }
@@ -270,10 +273,11 @@ Authentication.routes.post(builder => {
 });
 
 getTables().forEach(table => {
-    app.use(`/${table.tableName}`, declareCustomRoutes(table));
+    const route: string = `/${table.namespace ? table.namespace + "/" : ""}${table.tableName}`;
+    app.use(route, declareCustomRoutes(table));
 
     if (table.routes.enableGetAllRoute) {
-        app.get(`/${table.tableName}`, async (req: Request, res: Response): Promise<void> =>
+        app.get(route, async (req: Request, res: Response): Promise<void> =>
             await handleRequest(async (req, res) => {
                 const rows: Table[] = await table.selectAll(req.authorization.auth);
                 const objs: object[] = rows.map(row => row.deserialize());
@@ -287,7 +291,7 @@ getTables().forEach(table => {
     }
 
     if (table.routes.enableGetSingleRoute) {
-        app.get(`/${table.tableName}/:id`, async (req: Request, res: Response): Promise<void> =>
+        app.get(`/${route}/:id`, async (req: Request, res: Response): Promise<void> =>
             await handleRequest(async (req, res) => {
                 const id: number | null = req.params.getInt("id");
                 if (!id) {
@@ -307,7 +311,7 @@ getTables().forEach(table => {
     }
 
     if (table.routes.enableCreateRoute) {
-        app.post(`/${table.tableName}`, async (req: Request, res: Response): Promise<void> =>
+        app.post(`/${route}`, async (req: Request, res: Response): Promise<void> =>
             await handleRequest(async (req, res) => {
                 if (!req.authorization.auth) {
                     return res.unauthorized();
@@ -357,7 +361,7 @@ getTables().forEach(table => {
     }
 
     if (table.routes.enableUpdateRoute) {
-        app.put(`/${table.tableName}`, async (req: Request, res: Response): Promise<void> =>
+        app.put(`/${route}`, async (req: Request, res: Response): Promise<void> =>
             await handleRequest(async (req, res) => {
                 const id: number | null = req.params.getInt("id");
                 if (!id) {
@@ -400,7 +404,7 @@ getTables().forEach(table => {
     }
 
     if (table.routes.enableDeleteRoute) {
-        app.delete(`/${table.tableName}`, async (req: Request, res: Response): Promise<void> =>
+        app.delete(`/${route}`, async (req: Request, res: Response): Promise<void> =>
             await handleRequest(async (req, res) => {
                 const id: number | null = req.params.getInt("id");
                 if (!id) {

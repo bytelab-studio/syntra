@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import {Table} from "@bytelab.studio/syntra.plugin";
 
 interface PackageJSON {
     name: string;
@@ -7,6 +8,17 @@ interface PackageJSON {
         [name: string]: string;
     };
 }
+
+const _require: NodeRequire = require;
+require = ((id: string): any => {
+    const namespaceSize: number = Table.namespaceStack.length;
+
+    Table.namespaceStack.push(null);
+
+    _require(id);
+
+    Table.namespaceStack.splice(namespaceSize, Table.namespaceStack.length - namespaceSize);
+}) as NodeRequire;
 
 function loadPlugins(root: string, packageJSON: PackageJSON, buff: string[], initPackage: boolean = false): void {
     console.log(`INFO: Check '${packageJSON.name}'`);
