@@ -23,7 +23,7 @@ jobs:
           --health-timeout=5s
           --health-retries=3
         env:
-          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+          MYSQL_ROOT_PASSWORD: "root"
           MYSQL_DATABASE: unittests
     steps:
       - name: Setup NodeJS v16
@@ -66,4 +66,16 @@ jobs:
         run: tsc
       - name: Test
         working-directory: syntra
-        run: npm test
+        run: |
+          npm run &
+          sleep 5
+          npm test
+        env:
+          DB_DATABASE: unittests
+          DB_DRIVER: mysql
+          DB_HOST: localhost
+          DB_PASSWORD: root
+          DB_PORT: 3306
+          DB_USER: root
+          DEBUG: true
+          HTTP_PORT: 8080
