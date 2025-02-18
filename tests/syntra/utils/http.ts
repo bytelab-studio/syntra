@@ -1,4 +1,33 @@
-const PORT: string = process.env.HTTP_PORT ?? "8080";
+import * as child_process from "child_process";
+import * as path from "path";
+
+const PORT: string = "8080";
+let server: child_process.ChildProcessWithoutNullStreams;
+
+export function startServer(): void {
+    server = child_process.spawn("node", [
+        "out/app.js"
+    ], {
+        cwd: path.join(__dirname, "..", "..", ".."),
+        env: {
+            DB_DATABASE: "unittest",
+            DB_DRIVER: "mysql",
+            DB_HOST: "localhost",
+            DB_PORT: "3306",
+            DB_USER: "root",
+            DEBUG: "true",
+            HTTP_PORT: PORT,
+            JWT_SECRET: "1234567890"
+        }
+    });
+}
+
+export function stopServer(): void {
+    if (!server.killed) {
+        server.kill();
+    }
+}
+
 export let BASE_URL = `http://127.0.0.1:${PORT}`;
 
 type RequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';

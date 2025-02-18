@@ -48,11 +48,11 @@ export function construct_table_creation<T extends TableRef<K>, K extends Table>
         } else if (column instanceof PrimaryColumn) {
             items.push(`PRIMARY KEY (\`${column.getColumnName()}\`)`);
         } else if (column instanceof Relation1T1) {
-            items.push(`FOREIGN KEY (\`${column.getColumnName()}\`) REFERENCES \`${column.refTable.fullTableName}\`(\`${column.refTable.fullTableName + "_id"}\`)`);
+            items.push(`FOREIGN KEY (\`${column.getColumnName()}\`) REFERENCES \`${column.refTable.tableName}\`(\`${column.refTable.tableName + "_id"}\`)`);
         }
     }
 
-    return `CREATE TABLE IF NOT EXISTS \`${table.fullTableName}\` (${items.join(",")}) ENGINE = InnoDB`;
+    return `CREATE TABLE IF NOT EXISTS \`${table.tableName}\` (${items.join(",")}) ENGINE = InnoDB`;
 }
 
 function construct_table_join(relation: IJoinable<Table>, outerName: string, useName: string): string {
@@ -69,7 +69,7 @@ function construct_table_join(relation: IJoinable<Table>, outerName: string, use
         innerJoins.push(construct_table_join(innerRelation, useName, `${useName}${count++}`));
     }
 
-    return `LEFT JOIN \`${relation.refTable.fullTableName}\` AS \`${useName}\` ON \`${outerName}\`.\`${relation.getColumnName()}\` = \`${useName}\`.\`${relation.refTable.fullTableName + "_id"}\` ${innerJoins.join(" ")}`;
+    return `LEFT JOIN \`${relation.refTable.tableName}\` AS \`${useName}\` ON \`${outerName}\`.\`${relation.getColumnName()}\` = \`${useName}\`.\`${relation.refTable.tableName + "_id"}\` ${innerJoins.join(" ")}`;
 }
 
 export function construct_select_single<T extends TableRef<K>, K extends Table>(template: T): string {
@@ -82,9 +82,9 @@ export function construct_select_single<T extends TableRef<K>, K extends Table>(
             continue;
         }
 
-        joins.push(construct_table_join(relation, table.fullTableName, `J${count++}`));
+        joins.push(construct_table_join(relation, table.tableName, `J${count++}`));
     }
-    return `SELECT * FROM \`${table.fullTableName}\` ${joins.join(" ")} WHERE \`${table.fullTableName}\`.\`${table.primaryKey.getColumnName()}\` = ?`;
+    return `SELECT * FROM \`${table.tableName}\` ${joins.join(" ")} WHERE \`${table.tableName}\`.\`${table.primaryKey.getColumnName()}\` = ?`;
 }
 
 export function construct_select_all<T extends TableRef<K>, K extends Table>(template: T): string {
@@ -97,10 +97,10 @@ export function construct_select_all<T extends TableRef<K>, K extends Table>(tem
             continue;
         }
 
-        joins.push(construct_table_join(relation, table.fullTableName, `J${count++}`));
+        joins.push(construct_table_join(relation, table.tableName, `J${count++}`));
     }
 
-    return `SELECT * FROM \`${table.fullTableName}\` ${joins.join(" ")}`;
+    return `SELECT * FROM \`${table.tableName}\` ${joins.join(" ")}`;
 }
 
 export function construct_insert_single<K extends Table>(table: K): string {
@@ -113,7 +113,7 @@ export function construct_insert_single<K extends Table>(table: K): string {
         names.push(column.getColumnName());
     }
 
-    return `INSERT INTO \`${table.fullTableName}\` (${names.map(n => `\`${n}\``).join(", ")}) VALUE (${names.map(() => "?").join(", ")})`;
+    return `INSERT INTO \`${table.tableName}\` (${names.map(n => `\`${n}\``).join(", ")}) VALUE (${names.map(() => "?").join(", ")})`;
 }
 
 export function construct_update<K extends Table>(table: K): string {
@@ -126,15 +126,15 @@ export function construct_update<K extends Table>(table: K): string {
         names.push(column.getColumnName());
     }
 
-    return `UPDATE \`${table.fullTableName}\`
+    return `UPDATE \`${table.tableName}\`
             SET ${names.map(n => `\`${n}\` = ?`).join(",")}
             WHERE \`${table.primaryKey.getColumnName()}\` = ?;`;
 }
 
 export function construct_1_to_n(relation: Relation1TN<Table>): string {
-    return construct_select_all(relation.refTable) + ` WHERE \`${relation.refTable.fullTableName}\`.\`${relation.refColumn.getColumnName()}\` = ?`;
+    return construct_select_all(relation.refTable) + ` WHERE \`${relation.refTable.tableName}\`.\`${relation.refColumn.getColumnName()}\` = ?`;
 }
 
 export function construct_delete<K extends Table>(table: K): string {
-    return `DELETE FROM \`${table.fullTableName}\` WHERE \`${table.primaryKey.getColumnName()}\` = ?`;
+    return `DELETE FROM \`${table.tableName}\` WHERE \`${table.primaryKey.getColumnName()}\` = ?`;
 }
