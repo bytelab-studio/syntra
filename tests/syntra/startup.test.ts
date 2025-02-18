@@ -1,7 +1,16 @@
-import {get, post, getToken} from "./utils/http";
+import {get, post, startServer, stopServer, getToken} from "./utils/http";
 import {encrypt} from "./utils/encryption";
 
 jest.setTimeout(60000);
+
+beforeAll(async () => {
+    startServer();
+    await new Promise((resolve) => setTimeout(resolve, 10000)); // Wait for 10 seconds
+});
+
+afterAll(() => {
+    stopServer();
+});
 
 describe("Server", () => {
     test('online', async () => {
@@ -78,3 +87,23 @@ describe("Server", () => {
     });
 });
 
+// describe("resources", () => {
+//     test("resource", async () => {
+//         const content: string = "Some resources content";
+//         const token: string = await getToken();
+//         let res = await post("/resource?mime=plain/text", new Blob([content]), {
+//             "Authorization": `Bearer ${token}`
+//         });
+//         const data: any = await res.json();
+//         expect(data).toHaveProperty("results");
+//         expect(Array.isArray(data.results)).toBeTruthy();
+//         expect(data.results.length).toBeGreaterThan(0);
+//         const resource = data.results[0];
+//         expect(resource).toHaveProperty("resource_id");
+//         expect(typeof resource.resource_id).toEqual("number");
+//
+//         res = await get(`/resource/${resource.resource_id}`);
+//         const text: string = await res.text();
+//         expect(text).toEqual(content);
+//     });
+// });

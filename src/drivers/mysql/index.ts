@@ -313,7 +313,7 @@ const DB_POOL_LIMIT: number = parseInt(DB_POOL_LIMIT_VALUE);
     console.log("Create table");
     const declaredTables: string[] = await getDeclaredTables();
     for (const table of getTables()) {
-        if (declaredTables.includes(table.fullTableName)) {
+        if (declaredTables.includes(table.tableName)) {
             continue;
         }
         await table.events.beforeCreate.emit();
