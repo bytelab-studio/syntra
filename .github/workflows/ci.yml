@@ -67,7 +67,7 @@ jobs:
       - name: Test
         working-directory: syntra
         run: |
-          npm run &
+          npm run syntra &
           sleep 5
           npm test
         env:
