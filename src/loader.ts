@@ -2,6 +2,8 @@ import * as fs from "fs";
 import * as path from "path";
 import {Table} from "@bytelab.studio/syntra.plugin";
 
+const INCLUDE_DIR: string[] = (process.env.INCLUDE_DIR ?? "").split(path.delimiter);
+
 interface PackageJSON {
     name: string;
     dependencies: {
@@ -19,6 +21,29 @@ require = ((id: string): any => {
 
     Table.namespaceStack.splice(namespaceSize, Table.namespaceStack.length - namespaceSize);
 }) as NodeRequire;
+
+function loadIncludes(arr: string[]) {
+    console.log("INFO: Check included dirs");
+
+    for (let dir of INCLUDE_DIR) {
+        if (!path.isAbsolute(dir)) {
+            dir = path.join(process.cwd(), dir);
+        }
+        console.log(`INFO: Check '${dir}'`);
+        if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) {
+            console.log(`WARN: '${dir}' does not exist or is not a directory`);
+            continue;
+        }
+
+        const importFile = path.join(dir, "index.js");
+        if (!fs.existsSync(importFile) || !fs.statSync(importFile).isFile()) {
+            console.log(`WARN: '${importFile}' does not exist or is not a file`);
+            continue;
+        }
+
+        arr.push(importFile);
+    }
+}
 
 function loadPlugins(root: string, packageJSON: PackageJSON, buff: string[], initPackage: boolean = false): void {
     console.log(`INFO: Check '${packageJSON.name}'`);
@@ -67,6 +92,7 @@ export function loadFromMain(): string[] {
         const packageJSON: PackageJSON = JSON.parse(fs.readFileSync(rootPackage, "utf8"));
         const arr: string[] = [];
         loadPlugins(root, packageJSON, arr, true);
+        loadIncludes(arr);
         return arr;
     } catch (e) {
         console.log(`Cannot load package.json in '${rootPackage}': ${e}`);

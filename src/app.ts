@@ -56,7 +56,7 @@ if (flags.HTTPS_PORT != 0) {
 
 loadFromMain().forEach(plugin => {
     console.log(`INFO: Load '${plugin}'`);
-    require(plugin)
+    require(plugin);
 });
 require(path.join(__dirname, "drivers", flags.DB_DRIVER));
 
@@ -291,7 +291,7 @@ getTables().forEach(table => {
     }
 
     if (table.routes.enableGetSingleRoute) {
-        app.get(`/${route}/:id`, async (req: Request, res: Response): Promise<void> =>
+        app.get(`${route}/:id`, async (req: Request, res: Response): Promise<void> =>
             await handleRequest(async (req, res) => {
                 const id: number | null = req.params.getInt("id");
                 if (!id) {
@@ -311,7 +311,7 @@ getTables().forEach(table => {
     }
 
     if (table.routes.enableCreateRoute) {
-        app.post(`/${route}`, async (req: Request, res: Response): Promise<void> =>
+        app.post(`${route}`, async (req: Request, res: Response): Promise<void> =>
             await handleRequest(async (req, res) => {
                 if (!req.authorization.auth) {
                     return res.unauthorized();
@@ -361,7 +361,7 @@ getTables().forEach(table => {
     }
 
     if (table.routes.enableUpdateRoute) {
-        app.put(`/${route}`, async (req: Request, res: Response): Promise<void> =>
+        app.put(`${route}/:id`, async (req: Request, res: Response): Promise<void> =>
             await handleRequest(async (req, res) => {
                 const id: number | null = req.params.getInt("id");
                 if (!id) {
@@ -404,7 +404,7 @@ getTables().forEach(table => {
     }
 
     if (table.routes.enableDeleteRoute) {
-        app.delete(`/${route}`, async (req: Request, res: Response): Promise<void> =>
+        app.delete(`${route}/:id`, async (req: Request, res: Response): Promise<void> =>
             await handleRequest(async (req, res) => {
                 const id: number | null = req.params.getInt("id");
                 if (!id) {
