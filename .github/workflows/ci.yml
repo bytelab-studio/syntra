@@ -63,7 +63,9 @@ jobs:
           npm install ../syntra.plugin/$TARBALL_NAME
       - name: Compile Syntra
         working-directory: syntra
-        run: tsc
+        run: |
+          tsc
+          tsc -p ./tests/tables
       - name: Test
         working-directory: syntra
         run: |
