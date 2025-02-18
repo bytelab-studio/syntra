@@ -1,4 +1,4 @@
-import {get, post, getToken} from "./utils/http";
+import {get, post} from "./utils/http";
 import {encrypt} from "./utils/encryption";
 
 jest.setTimeout(60000);
