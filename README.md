@@ -1,3 +1,5 @@
+![CI](https://github.com/bytelab-studio/syntra/actions/workflows/ci.yml/badge.svg)
+
 # Syntra
 
 A Modular RESTful API Server
