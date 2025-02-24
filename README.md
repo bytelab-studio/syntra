@@ -1,5 +1,6 @@
 ![CI](https://github.com/bytelab-studio/syntra/actions/workflows/ci.yml/badge.svg)
-
+![npm version](https://img.shields.io/npm/v/@bytelab-studio%2Fsyntra)
+![npm downloads](https://img.shields.io/npm/dw/@bytelab-studio%2Fsyntra)
 # Syntra
 
 A Modular RESTful API Server
