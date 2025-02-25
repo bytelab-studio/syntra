@@ -10,5 +10,6 @@ We highly appreciate community contributions—whether it’s improving existing
 - [Event Bus](./03-event-bus.md)
 - [Route Manager](./04-route-manager.md)
 - [Schemas](./05-schemas.md)
+- [Authentication](./06-authentication.md)
 - Drivers
   - [MySQL](./drivers/mysql.md)
