@@ -1,6 +1,6 @@
 {
     "name": "@bytelab.studio/syntra",
-    "version": "0.2.1",
+    "version": "0.2.2",
     "description": "A modular RESTful API Server",
     "main": "",
     "author": "Christoph Koschel",
