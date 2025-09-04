@@ -430,8 +430,8 @@ app.all("*", (req, res) =>
 );
 
 if (!!httpServer) {
-    httpServer.listen(flags.HTTP_PORT, "127.0.0.1");
+    httpServer.listen(flags.HTTP_PORT);
 }
 if (!!httpsServer && !flags.DEBUG) {
-    httpsServer.listen(flags.HTTPS_PORT, "127.0.0.1");
+    httpsServer.listen(flags.HTTPS_PORT);
 }
